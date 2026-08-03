@@ -1,0 +1,19 @@
+{
+  "name": "caniemail-ai-tooling",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Skill and MCP server giving AI agents correct access to the caniemail dataset",
+  "type": "module",
+  "author": "shbernal",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "test": "node --test core/",
+    "test:network": "CANIEMAIL_TEST_NETWORK=1 node --test core/"
+  },
+  "dependencies": {
+    "caniemail": "^2.0.2"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "mcp-server-caniemail",
+  "version": "0.1.0",
+  "description": "MCP server for email client HTML/CSS compatibility, backed by caniemail.com",
+  "type": "module",
+  "author": "shbernal",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "modelcontextprotocol",
+    "caniemail",
+    "email",
+    "html-email",
+    "compatibility"
+  ],
+  "bin": {
+    "mcp-server-caniemail": "src/server.mjs"
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "caniemail": "^2.0.2",
+    "zod": "^4.4.3"
+  }
+}
