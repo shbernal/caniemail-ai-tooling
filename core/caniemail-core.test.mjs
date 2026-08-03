@@ -301,6 +301,27 @@ test('lint reports failures with position, notes and url', () => {
   assert.ok(radius.notes.some((n) => /VML|RoundRect/i.test(n)), 'expected the VML workaround note');
 });
 
+test('per-client notes never contradict the verdict they attach to', () => {
+  // css-gap is flatly unsupported in Outlook Windows, but Gmail's cell carries
+  // "Partial. Supports column-gap for flexbox". Accumulating notes per feature
+  // rather than per verdict leaks that annotation onto the Outlook error,
+  // producing a hard failure that reads as partial support.
+  const result = lintEmail(dataset, {
+    html: '<div style="display:flex; gap:16px">hi</div>',
+    clients: ['outlook.windows', 'gmail.desktop-webmail'],
+  });
+  const findings = result.findings.filter((f) => f.feature === 'css-gap');
+  assert.ok(findings.length >= 2, 'expected gap to split across verdicts');
+
+  const outlook = findings.find((f) => f.clients_affected.includes('outlook.windows'));
+  assert.equal(outlook.verdict, UNSUPPORTED);
+  assert.deepEqual(outlook.notes, [], 'the Outlook error must not carry Gmail’s partial-support note');
+
+  const gmail = findings.find((f) => f.clients_affected.includes('gmail.desktop-webmail'));
+  assert.equal(gmail.verdict, MITIGATED);
+  assert.ok(gmail.notes.some((n) => /column-gap/.test(n)), 'Gmail keeps its own note');
+});
+
 test('lint never reports passing features', () => {
   const result = lintEmail(dataset, {
     html: '<div style="color:red">hi</div>',

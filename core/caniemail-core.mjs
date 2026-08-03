@@ -300,15 +300,29 @@ export function resolveSupport(feature, client, options = {}) {
   return { verdict, version, raw, notes: notesFor(feature, raw) };
 }
 
-/** Resolve `#1 #2` note references against the feature's `notes_by_num` map. */
+/**
+ * Resolve `#1 #2` note references against the feature's `notes_by_num` map.
+ *
+ * Only the notes this cell actually references. The feature-level `notes`
+ * field is deliberately excluded: it is a general remark about the feature,
+ * often describing one specific client, and attaching it to every verdict
+ * produces contradictions — `css-gap` is unsupported in Outlook but its global
+ * note reads "Partial. Supports column-gap for flexbox", which is about Gmail.
+ * An error that carries a note describing partial support is worse than no
+ * note. It is surfaced separately as `feature_notes`.
+ */
 function notesFor(feature, raw) {
   const notes = [];
   for (const match of String(raw).matchAll(/#(\d+)/g)) {
     const note = feature?.notes_by_num?.[match[1]];
     if (note) notes.push(note);
   }
-  if (feature?.notes) notes.push(String(feature.notes).trim());
   return notes;
+}
+
+/** The feature-level remark, which applies to the feature rather than any one client. */
+function featureNotes(feature) {
+  return feature?.notes ? String(feature.notes).trim() : null;
 }
 
 /** The version keys on record for a client, in authored order. */
@@ -357,6 +371,7 @@ export function checkFeatureSupport(dataset, slug, clientGlobs, options = {}) {
     url: feature.url,
     last_test_date: feature.last_test_date,
     staleness: stalenessOf(feature.last_test_date),
+    feature_notes: featureNotes(feature),
     summary: summarise(support),
     support,
     data_source: dataset.meta,
@@ -564,17 +579,27 @@ export function lintEmail(dataset, options) {
     const feature = dataset.byTitle.get(title);
     if (!feature) continue; // Detected something the dataset no longer describes.
 
-    const buckets = { unsupported: [], mitigated: [], untested: [] };
-    const notes = new Map();
+    // Notes accumulate per verdict bucket, never across the whole feature.
+    // Sharing one note set between buckets leaks a note describing partial
+    // support in one client onto another client's hard failure — `css-gap` is
+    // unsupported in Outlook, and Gmail's "Partial. Supports column-gap"
+    // annotation must not travel with the Outlook error.
+    const buckets = {
+      [UNSUPPORTED]: { clients: [], notes: new Set() },
+      [MITIGATED]: { clients: [], notes: new Set() },
+      [UNTESTED]: { clients: [], notes: new Set() },
+    };
 
     for (const client of clients) {
       const resolved = resolveSupport(feature, client);
       if (resolved.verdict === SUPPORTED) continue;
-      buckets[resolved.verdict].push(client);
-      for (const note of resolved.notes) notes.set(note, true);
+      const bucket = buckets[resolved.verdict];
+      bucket.clients.push(client);
+      for (const note of resolved.notes) bucket.notes.add(note);
     }
 
-    for (const [verdict, affected] of Object.entries(buckets)) {
+    for (const [verdict, bucket] of Object.entries(buckets)) {
+      const affected = bucket.clients;
       if (affected.length === 0) continue;
       if (verdict === UNTESTED && !includeUntested) continue;
       findings.push({
@@ -584,7 +609,8 @@ export function lintEmail(dataset, options) {
         verdict,
         clients_affected: affected,
         client_count: affected.length,
-        notes: verdict === UNTESTED ? [] : [...notes.keys()],
+        notes: verdict === UNTESTED ? [] : [...bucket.notes],
+        feature_notes: verdict === UNTESTED ? null : featureNotes(feature),
         position: position ?? null,
         url: feature.url,
         last_test_date: feature.last_test_date,

@@ -10,8 +10,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "test": "node --test core/",
-    "test:network": "CANIEMAIL_TEST_NETWORK=1 node --test core/"
+    "test": "node --test 'core/*.test.mjs'",
+    "test:network": "CANIEMAIL_TEST_NETWORK=1 node --test 'core/*.test.mjs'"
   },
   "dependencies": {
     "caniemail": "^2.0.2"

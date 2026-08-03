@@ -22,3 +22,9 @@ regression test:
   to the wrong version under a lexicographic sort).
 - Missing stats entries resolve to `untested` instead of raising `RangeError`
   (16% of pairs have no entry; 14 of 48 clients crash on realistic markup).
+
+Notes are scoped to the verdict they describe. A note attached to one client's
+cell no longer travels onto another client's finding, and the feature-level
+remark is surfaced separately as `feature_notes` — otherwise `css-gap` reports
+as a hard failure in Outlook annotated "Partial. Supports column-gap", which is
+Gmail's note.
