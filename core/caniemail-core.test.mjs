@@ -197,6 +197,15 @@ test('a glob matching nothing is an error, not an empty pass', () => {
   assert.throws(() => expandClients(dataset, []), /At least one client/);
 });
 
+test('a client list that is not a list says so, rather than "none given"', () => {
+  // Reachable only through the core API — zod and the CLI both hand down an
+  // array — but it is the obvious slip, and "at least one client is required"
+  // sent it looking for a client it had already supplied.
+  assert.throws(() => expandClients(dataset, 'outlook.windows'), /must be an array, not string/);
+  assert.throws(() => expandClients(dataset, null), /must be an array, not null/);
+  assert.throws(() => expandClients(dataset, undefined), /must be an array, not undefined/);
+});
+
 test('a wildcard does not leak across the dot separator', () => {
   // "outlook.*" must not match "outlook.windows.foo"-style ids, and "*" as a
   // family must not swallow the platform segment.
@@ -249,6 +258,21 @@ test('search requires a query', () => {
   assert.throws(() => searchFeatures(dataset, '   '), /query is required/);
 });
 
+test('a limit that can return nothing is an error, not an empty result', () => {
+  // The same stance as an unmatched glob. `limit: 0` returned `match_count: 42`
+  // beside an empty `results`, and `--limit abc` on the CLI reached here as NaN
+  // and read as "no such feature".
+  assert.throws(() => searchFeatures(dataset, 'flexbox', { limit: 0 }), /positive integer/);
+  assert.throws(() => searchFeatures(dataset, 'flexbox', { limit: -5 }), /positive integer/);
+  assert.throws(() => searchFeatures(dataset, 'flexbox', { limit: Number.NaN }), /positive integer/);
+  assert.throws(() => searchFeatures(dataset, 'flexbox', { limit: 2.5 }), /positive integer/);
+  // Absent is not the same as invalid: the default still applies.
+  assert.deepEqual(
+    searchFeatures(dataset, 'flexbox', { limit: undefined }).results,
+    searchFeatures(dataset, 'flexbox').results,
+  );
+});
+
 /* -------------------------------------------------------------------------- */
 /* check_feature_support                                                       */
 /* -------------------------------------------------------------------------- */
@@ -299,9 +323,15 @@ test('a version pin resolves per client instead of failing the whole glob', () =
     // not a silent fallback to some other version's verdict.
     assert.equal(entry.verdict, UNTESTED);
     assert.equal(entry.version, null);
-    assert.equal(entry.version_requested, '2016');
     assert.deepEqual(entry.notes, [], 'an untested verdict has no findings to report');
   }
+
+  // The pin is stated once, at the top level. Every entry in `support` has the
+  // same keys whether the pin landed or not — the alternative was one array
+  // holding two shapes, distinguishable only by which clients happened to miss.
+  const shapes = new Set(result.support.map((entry) => Object.keys(entry).sort().join(',')));
+  assert.equal(shapes.size, 1, `support entries disagree on shape: ${[...shapes].join(' | ')}`);
+  assert.ok(!('version_requested' in result.support[0]));
 });
 
 test('a version pin no requested client carries is still an error', () => {

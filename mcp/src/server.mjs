@@ -183,8 +183,9 @@ server.registerTool(
         .describe(
           'Pin a specific client version instead of the newest, e.g. "2016" for Outlook 2016. ' +
             'Works with wildcards: clients that have no such version come back as "untested" ' +
-            'with version_requested set, rather than failing the whole call. Only a version no ' +
-            'requested client has at all is an error.',
+            'with versions_on_record showing what they do have, rather than failing the whole ' +
+            'call. Only a version no requested client has at all is an error. The pin is echoed ' +
+            'once as version_requested on the result.',
         ),
     },
   },

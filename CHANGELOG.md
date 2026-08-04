@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Three small corrections to the core API.
+
+  A client list that is not a list now says so. `{ clients: 'outlook.windows' }`
+  was answered with "at least one client or glob is required", which sends you
+  looking for a client you had already supplied.
+
+  A `limit` that cannot return anything is an error rather than an empty result,
+  matching the stance already taken on an unmatched glob. `--limit 0` reported
+  "5 matches" beside an empty list, and `--limit abc` reached the core as `NaN`
+  and read as "no such feature" — a typo answered with a confident nothing. The
+  MCP schema already rejected both; the CLI is where they were reachable.
+
+  `version_requested` is gone from the individual entries of the `support`
+  array `check_feature_support` returns, and stays on the result. It was on
+  the clients the pin missed and absent on the ones it landed on, so one array
+  held two shapes; `versions_on_record` already explains why a pin did not land.
+
 - The MCP server keeps its feature array across a revalidation that finds
   upstream unmoved, so the memoised title tables survive with it, while still
   adopting the fresh `meta` — `data_source` has to keep telling the truth about

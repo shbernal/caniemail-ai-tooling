@@ -136,6 +136,21 @@ test('a bad glob fails on stderr with nothing on stdout', async () => {
   assert.match(result.stderr, /No client matches: outlook\.win/);
 });
 
+test('a limit that cannot return anything fails here, where it is reachable', async () => {
+  // The MCP schema rejects these before the core sees them; the CLI is the only
+  // surface that could pass them through, so this is the only place it shows.
+  const zero = await run(['search', 'flexbox', '--limit', '0', '--offline']);
+  assert.equal(zero.code, 1);
+  assert.equal(zero.stdout, '');
+  assert.match(zero.stderr, /positive integer, not 0/);
+
+  // `Number('abc')` is NaN, which used to slice to nothing and read as "no such
+  // feature" — a typo answered with a confident empty result.
+  const junk = await run(['search', 'flexbox', '--limit', 'abc', '--offline']);
+  assert.equal(junk.code, 1);
+  assert.match(junk.stderr, /positive integer, not NaN/);
+});
+
 test('a missing --clients is an error, not an empty pass', async () => {
   const result = await run(['search', 'flexbox', '--offline']);
   assert.equal(result.code, 0, 'search does not need --clients');

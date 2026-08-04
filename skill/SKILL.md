@@ -91,8 +91,10 @@ either segment: `outlook.windows`, `outlook.*`, `*.ios`, or `*` for all 48.
 `check --version` pins a specific client version instead of the newest, and
 works with globs: `check css-border-radius --clients outlook.* --version 2016`
 answers "does this work in Outlook 2016", which is usually the real question.
-Clients with no such version on record come back `untested` with
-`version_requested` set — only a version *no* requested client has is an error.
+Clients with no such version on record come back `untested`, with
+`versions_on_record` showing what they do have — only a version *no* requested
+client has is an error. The pin is echoed once as `version_requested` on the
+result, not on every entry.
 
 ### Clients worth knowing
 

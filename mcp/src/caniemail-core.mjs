@@ -231,7 +231,17 @@ export async function loadDataset(options = {}) {
  * @returns {string[]} Matching client ids, sorted and deduplicated.
  */
 export function expandClients(dataset, globs) {
-  if (!Array.isArray(globs) || globs.length === 0) {
+  // Two different mistakes, and one message for both used to send the second
+  // one the wrong way: `{ clients: 'outlook.windows' }` — the plausible slip,
+  // and one the zod schema and the CLI both rule out before they get here — was
+  // answered with "at least one client is required", when one had been given.
+  if (!Array.isArray(globs)) {
+    throw new Error(
+      `Clients must be an array, not ${globs === null ? 'null' : typeof globs}. ` +
+        'Pass ["outlook.windows"], not "outlook.windows".',
+    );
+  }
+  if (globs.length === 0) {
     throw new Error('At least one client or glob is required. Use ["*"] for all clients.');
   }
   const matched = new Set();
@@ -413,11 +423,16 @@ export function checkFeatureSupport(dataset, slug, clientGlobs, options = {}) {
       // supported, not unsupported, nothing on record. `notes` stays empty
       // because an untested verdict has no findings to report, and
       // `versions_on_record` already shows why the pin did not land.
+      //
+      // The pin itself is *not* repeated here. It is stated once at the top
+      // level, and carrying it per entry both duplicated that and gave the
+      // entries in one array two different shapes — present on the clients the
+      // pin missed, absent on the ones it landed on — which is worse to consume
+      // than either shape alone.
       return {
         client,
         verdict: UNTESTED,
         version: null,
-        version_requested: pinned,
         notes: [],
         versions_on_record: onRecord,
       };
@@ -499,6 +514,18 @@ export function searchFeatures(dataset, query, options = {}) {
   const { limit = 15, category } = options;
   const needle = String(query ?? '').trim().toLowerCase();
   if (!needle) throw new Error('A search query is required.');
+
+  // Same stance as an unmatched glob: a request that cannot return anything is
+  // an error, not a clean empty result. `--limit 0` on the CLI used to report
+  // "42 matches" beside an empty list, and `--limit abc` was worse — NaN slices
+  // to nothing, so a typo read as "no such feature". The MCP schema already
+  // rejects both; the CLI is where they were reachable.
+  if (!Number.isInteger(limit) || limit < 1) {
+    // `JSON.stringify(NaN)` is "null", which would name the wrong mistake for
+    // the commonest way to get here — `--limit abc` arriving as `Number('abc')`.
+    const shown = Number.isNaN(limit) ? 'NaN' : JSON.stringify(limit);
+    throw new Error(`limit must be a positive integer, not ${shown}.`);
+  }
 
   const terms = needle.split(/\s+/);
   const scored = [];
