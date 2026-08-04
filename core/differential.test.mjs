@@ -28,7 +28,7 @@ import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { detectFeatures } from './detect.mjs';
+import { detectFeatures, formatPosition } from './detect.mjs';
 import { scanHtml } from './html-scan.mjs';
 import { upstreamDetect } from './upstream-detect.mjs';
 import snapshot from './data/caniemail.json' with { type: 'json' };
@@ -152,10 +152,25 @@ function inputFor(name, code) {
   return name.endsWith('.css') ? { css: code } : { html: code };
 }
 
-function formatPosition(position) {
-  if (!position) return 'no-position';
-  const { start, end } = position;
-  return `${start.line}:${start.column}-${end.line}:${end.column}`;
+/** Upstream's position object in our rendering, or a marker when it reported none. */
+function describePosition(position) {
+  return position ? formatPosition(position) : 'no-position';
+}
+
+/**
+ * Our `L:C-L:C` rendering, back into the object shape upstream reports.
+ *
+ * `classifyMove` compares positions arithmetically — offsetting them, testing
+ * containment — which needs numbers rather than a string. Parsing here rather
+ * than exporting a parser from the core keeps a function that exists only for
+ * this suite out of the vendored modules, as `adjustPosition` already is.
+ */
+function parsePosition(text) {
+  const [start, end] = text.split('-').map((point) => {
+    const [line, column] = point.split(':').map(Number);
+    return { line, column };
+  });
+  return { start, end };
 }
 
 test('the corpus covers every mapping category', () => {
@@ -207,21 +222,30 @@ for (const name of fixtures) {
     for (const [title, hit] of upstream) {
       const mine = ours.get(title);
       if (!mine) continue; // Covered by the previous test.
-      if (same(hit.position, mine.position)) continue;
+      // Upstream reports one position per title; ours reports every occurrence.
+      // The first is still the earliest, so it is the one to compare.
+      const [ourFirst] = mine.positions;
+      if (describePosition(hit.position) === ourFirst) continue;
 
-      const reason = classifyMove(title, hit.position, mine.position, offsets);
+      const reason = classifyMove(title, hit.position, parsePosition(ourFirst), offsets);
       assert.ok(
         reason,
-        `"${title}" in ${name} moved ${formatPosition(hit.position)} -> ` +
-          `${formatPosition(mine.position)} for no known reason`,
+        `"${title}" in ${name} moved ${describePosition(hit.position)} -> ` +
+          `${ourFirst} for no known reason`,
       );
     }
   });
 
   test(`${name}: output matches its golden file`, () => {
     const ours = detectFeatures(dataset, input);
+    // `(xN)` is suppressed at N=1, so a single-occurrence line renders exactly
+    // as it always has. A goldens diff then shows only the titles that gained
+    // occurrences, which is the reviewable signal rather than a full rewrite.
     const lines = [...ours.values()]
-      .map((hit) => `${formatPosition(hit.position)}\t${hit.title}`)
+      .map((hit) => {
+        const repeats = hit.occurrence_count > 1 ? ` (x${hit.occurrence_count})` : '';
+        return `${hit.positions[0]}${repeats}\t${hit.title}`;
+      })
       .sort();
     const rendered = `${lines.join('\n')}\n`;
     const goldenPath = join(goldenDir, `${name}.txt`);

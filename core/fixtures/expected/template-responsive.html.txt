@@ -1,9 +1,9 @@
-10:3-14:4	Class selector
-11:5-11:18	display
+10:3-14:4 (x9)	Class selector
 11:5-11:18	display:grid
-12:5-12:42	grid-template-* properties
+11:5-11:18 (x3)	display
+12:5-12:42 (x2)	grid-template-* properties
 13:5-13:14	gap, column-gap, row-gap
-13:5-13:14	px unit
+13:5-13:14 (x5)	px unit
 16:5-16:18	display:flex
 17:5-17:24	align-items
 18:5-18:35	justify-content
@@ -20,14 +20,14 @@
 23:3-23:41	Descendant combinator
 24:22-24:48	text-decoration
 24:3-24:51	Attribute selector
-25:3-28:4	@media
 25:3-28:4	@media (prefers-color-scheme)
-26:12-26:31	background
+25:3-28:4 (x2)	@media
+26:12-26:31 (x2)	background
 31:20-31:44	!important keyword
 31:20-31:44	display:none
 35:1-49:7	<body> element
-36:1-48:6	<div> element
-39:23-39:32	<p> element
+36:1-48:6 (x6)	<div> element
+39:23-39:32 (x2)	<p> element
 40:5-43:14	<picture> element
 41:7-41:51	AVIF image format
 41:7-41:51	srcset and sizes attributes
@@ -40,7 +40,7 @@
 7:11-7:35	color-scheme CSS property
 8:3-8:32	Universal selector *
 8:7-8:29	box-sizing
-9:10-9:19	margin
+9:10-9:19 (x2)	margin
 9:21-9:70	font shorthand
 9:21-9:70	system-ui, ui-serif, ui-sans-serif, ui-rounded, ui-monospace
-9:3-9:73	Type selector
+9:3-9:73 (x4)	Type selector

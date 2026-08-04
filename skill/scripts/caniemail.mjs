@@ -14,7 +14,7 @@
  */
 
 import { readFile } from 'node:fs/promises';
-import { argv, exit, stdin } from 'node:process';
+import { argv, exit, stdin, stdout } from 'node:process';
 
 import {
   checkFeatureSupport,
@@ -78,8 +78,16 @@ async function readStdin() {
   return text;
 }
 
+/**
+ * Compact when piped, indented when a person is looking.
+ *
+ * The caller is normally an agent reading stdout into its context, where
+ * indentation is pure cost — on a lint against all 48 clients it was 16KB of
+ * whitespace, about 4k tokens. At a terminal it is worth the bytes, and stdout
+ * being a TTY is exactly the signal that distinguishes the two.
+ */
 function print(value) {
-  process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+  process.stdout.write(`${JSON.stringify(value, null, stdout.isTTY ? 2 : 0)}\n`);
 }
 
 async function main() {

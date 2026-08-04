@@ -1,17 +1,17 @@
-10:1-12:2	Class selector
+10:1-12:2 (x10)	Class selector
 14:1-16:2	ID selector
-18:1-20:2	Attribute selector
-1:1-1:72	CSS comments
+18:1-20:2 (x3)	Attribute selector
+1:1-1:72 (x2)	CSS comments
 26:1-28:2	Chaining selectors
-2:1-4:2	Type selector
-30:1-32:2	Descendant combinator
+2:1-4:2 (x5)	Type selector
+30:1-32:2 (x2)	Descendant combinator
 34:1-36:2	Child combinator
 38:1-40:2	Adjacent sibling combinator
 42:1-44:2	General sibling combinator
 46:1-49:2	Grouping selectors
 51:1-53:2	:hover
 55:1-57:2	:first-child
-59:1-61:2	:not
+59:1-61:2 (x2)	:not
 63:1-65:2	:checked
 6:1-8:2	Universal selector *
 70:3-72:4	CSS Nesting

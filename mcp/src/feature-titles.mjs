@@ -510,6 +510,7 @@ function stripImportant(value) {
   return value.replace(/\s*!\s*important\s*$/i, '').trim();
 }
 
+/** Deliberately duplicated in `caniemail-core.mjs`; see the note there. */
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

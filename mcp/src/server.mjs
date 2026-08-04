@@ -23,8 +23,36 @@ import {
   loadDataset,
   searchFeatures,
 } from './caniemail-core.mjs';
+import pkg from '../package.json' with { type: 'json' };
 
-const dataset = await loadDataset({ offline: process.env.CANIEMAIL_OFFLINE === '1' });
+const offline = process.env.CANIEMAIL_OFFLINE === '1';
+
+/**
+ * How long a loaded dataset is trusted inside this process.
+ *
+ * An MCP server lives as long as its client — days. Loading once at startup
+ * meant `data_source` kept reporting `source: "live"` with no warning and a
+ * `fetchedAt` from whenever the editor was opened, which is exactly the silent
+ * staleness the field exists to prevent.
+ *
+ * Revalidating on *every* call would be wrong in the other direction:
+ * `buildTitleTables` memoises on a WeakMap keyed by the feature array, and each
+ * `loadDataset` returns a fresh one, so a per-call reload would rebuild the
+ * title tables for every lint. Fifteen minutes keeps the tables warm while
+ * bounding how stale an answer can be, and `loadDataset` still owns the 24-hour
+ * *disk* cache — so a revalidation with a warm cache is a file read, not a
+ * fetch, and processes sharing the cache agree with each other.
+ */
+const REVALIDATE_MS = 15 * 60 * 1000;
+
+let loaded = null;
+
+async function getDataset() {
+  if (!loaded || Date.now() - loaded.at >= REVALIDATE_MS) {
+    loaded = { value: await loadDataset({ offline }), at: Date.now() };
+  }
+  return loaded.value;
+}
 
 /**
  * The client roster, inlined into the tool descriptions.
@@ -34,8 +62,17 @@ const dataset = await loadDataset({ offline: process.env.CANIEMAIL_OFFLINE === '
  * `outlook.outlook-com` (webmail) are different engines with very different
  * support before it can pick targets. Spending the tokens here beats a fifth
  * tool that every session would have to call first.
+ *
+ * Read from the bundled snapshot rather than the live dataset, because tool
+ * descriptions are registered once and this is the only thing that has to exist
+ * before `connect()`. Taking it from the snapshot costs no network, so the
+ * handshake never waits on caniemail.com — previously a slow or black-holed
+ * network delayed `initialize` by the full fetch timeout. The roster is 48
+ * identifiers that change about never; if upstream adds a client, the
+ * descriptions catch up on the next restart while the *data* is already current
+ * from the first tool call.
  */
-const CLIENT_ROSTER = dataset.clients.join(', ');
+const CLIENT_ROSTER = (await loadDataset({ offline: true })).clients.join(', ');
 
 const CLIENT_ARG = z
   .array(z.string())
@@ -46,9 +83,16 @@ const CLIENT_ARG = z
       `Known clients: ${CLIENT_ROSTER}.`,
   );
 
-const server = new McpServer({ name: 'caniemail', version: '0.1.0' });
+// Read rather than repeated, so it cannot drift from the published version at
+// the next release. `files` limits the tarball to `src` and `README.md`, but npm
+// always ships package.json at the package root, so `../` resolves once
+// installed exactly as it does here.
+const server = new McpServer({ name: 'caniemail', version: pkg.version });
 
-const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] });
+// Compact, not indented. Nothing human ever reads this — it goes into an
+// agent's context — and on a lint of a realistic newsletter against all 48
+// clients the indentation alone was 16KB, roughly 4k tokens of whitespace.
+const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value) }] });
 
 const fail = (error) => ({
   content: [{ type: 'text', text: error.message }],
@@ -67,8 +111,13 @@ server.registerTool(
       '"error" (unsupported — will not render, use a fallback), ' +
       '"warning" (partial or conditional support — read the notes, usually workable), and ' +
       '"unknown" (never tested on those clients — this is NOT evidence of support; avoid or test). ' +
-      'Passing features are never returned. Each finding carries the source position, the ' +
-      'clients affected, any documented workaround, and the feature URL.',
+      'Passing features are never returned. Each finding carries every source position it was ' +
+      'seen at as "line:col-line:col" (with occurrence_count, which is higher than the list ' +
+      'when a feature appears more than ten times), the clients affected, any documented ' +
+      'workaround, and the feature URL. "clients_affected" is compressed against the clients ' +
+      'you asked for: "*" means all of them and "outlook.*" means all the ones you asked for in ' +
+      'that family, with client_count always the exact number. Per-severity advice is in the ' +
+      'result\'s "guidance" legend rather than repeated on every finding.',
     inputSchema: {
       html: z.string().optional().describe('The email HTML. Inline styles are checked too.'),
       css: z.string().optional().describe('Standalone CSS, e.g. the contents of a <style> block.'),
@@ -81,7 +130,7 @@ server.registerTool(
   },
   async ({ html, css, clients, include_untested }) => {
     try {
-      return json(lintEmail(dataset, { html, css, clients, includeUntested: include_untested }));
+      return json(lintEmail(await getDataset(), { html, css, clients, includeUntested: include_untested }));
     } catch (error) {
       return fail(error);
     }
@@ -107,13 +156,15 @@ server.registerTool(
         .optional()
         .describe(
           'Pin a specific client version instead of the newest, e.g. "2016" for Outlook 2016. ' +
-            'Must be one of the versions on record for every client requested.',
+            'Works with wildcards: clients that have no such version come back as "untested" ' +
+            'with version_requested set, rather than failing the whole call. Only a version no ' +
+            'requested client has at all is an error.',
         ),
     },
   },
   async ({ feature, clients, version }) => {
     try {
-      return json(checkFeatureSupport(dataset, feature, clients, { version }));
+      return json(checkFeatureSupport(await getDataset(), feature, clients, { version }));
     } catch (error) {
       return fail(error);
     }
@@ -140,7 +191,7 @@ server.registerTool(
   },
   async ({ query, category, limit }) => {
     try {
-      return json(searchFeatures(dataset, query, { category, limit }));
+      return json(searchFeatures(await getDataset(), query, { category, limit }));
     } catch (error) {
       return fail(error);
     }
@@ -156,7 +207,14 @@ server.registerTool(
       'the other tools’ descriptions, so call this only if you need the display names.',
     inputSchema: {},
   },
-  async () => json({ clients: listClients(dataset), count: dataset.clients.length, data_source: dataset.meta }),
+  async () => {
+    const dataset = await getDataset();
+    return json({
+      clients: listClients(dataset),
+      count: dataset.clients.length,
+      data_source: dataset.meta,
+    });
+  },
 );
 
 /* -------------------------------------------------------------------------- */

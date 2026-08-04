@@ -278,6 +278,40 @@ test('an unknown slug points at the search tool', () => {
   assert.throws(() => checkFeatureSupport(dataset, 'css-flexbocks', ['*']), /search_features/);
 });
 
+test('a version pin resolves per client instead of failing the whole glob', () => {
+  // "Does this work in Outlook 2016" spelled the way anyone would spell it.
+  // Fanning `resolveSupport`'s throw across a glob made this fail on the first
+  // sibling that versions itself by date — naming a client nobody asked about.
+  const result = checkFeatureSupport(dataset, 'css-border-radius', ['outlook.*'], {
+    version: '2016',
+  });
+  assert.equal(result.version_requested, '2016');
+
+  const pinned = result.support.filter((s) => s.version === '2016');
+  assert.ok(pinned.length > 0, 'expected at least one Outlook client to carry a 2016 entry');
+
+  for (const entry of result.support) {
+    if (entry.versions_on_record.includes('2016')) {
+      assert.equal(entry.version, '2016');
+      continue;
+    }
+    // No data for the version asked about is untested — not unsupported, and
+    // not a silent fallback to some other version's verdict.
+    assert.equal(entry.verdict, UNTESTED);
+    assert.equal(entry.version, null);
+    assert.equal(entry.version_requested, '2016');
+    assert.deepEqual(entry.notes, [], 'an untested verdict has no findings to report');
+  }
+});
+
+test('a version pin no requested client carries is still an error', () => {
+  // The per-client fallback must not swallow a typo into 48 untested verdicts.
+  assert.throws(
+    () => checkFeatureSupport(dataset, 'css-border-radius', ['outlook.*'], { version: '2015' }),
+    /No data for outlook\.[\w-]+ version "2015"/,
+  );
+});
+
 /* -------------------------------------------------------------------------- */
 /* lint_email                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -294,7 +328,8 @@ test('lint reports failures with position, notes and url', () => {
   assert.equal(flex.verdict, UNSUPPORTED);
   assert.deepEqual(flex.clients_affected, ['outlook.windows']);
   assert.ok(flex.url.startsWith('https://'));
-  assert.equal(typeof flex.position.start.line, 'number');
+  assert.match(flex.positions[0], /^\d+:\d+-\d+:\d+$/);
+  assert.equal(flex.occurrence_count, 1);
 
   const radius = result.findings.find((f) => f.feature === 'css-border-radius');
   assert.ok(radius.notes.some((n) => /VML|RoundRect/i.test(n)), 'expected the VML workaround note');
@@ -319,6 +354,43 @@ test('per-client notes never contradict the verdict they attach to', () => {
   const gmail = findings.find((f) => f.clients_affected.includes('gmail.desktop-webmail'));
   assert.equal(gmail.verdict, MITIGATED);
   assert.ok(gmail.notes.some((n) => /column-gap/.test(n)), 'Gmail keeps its own note');
+});
+
+test('every occurrence of a feature is reported, not just the first', () => {
+  // Detection used to keep only the earliest sighting per title, so an email
+  // using border-radius twelve times produced one finding pointing at the
+  // first — leaving an agent that fixed it with no signal the others existed.
+  const html = [
+    '<div style="border-radius:4px">a</div>',
+    '<div style="border-radius:8px">b</div>',
+    '<div style="border-radius:9px">c</div>',
+  ].join('\n');
+  const result = lintEmail(dataset, { html, clients: ['outlook.windows'] });
+
+  const radius = result.findings.find((f) => f.feature === 'css-border-radius');
+  assert.equal(radius.occurrence_count, 3);
+  assert.equal(radius.positions.length, 3);
+  assert.deepEqual(
+    radius.positions.map((p) => Number(p.split(':')[0])),
+    [1, 2, 3],
+    'positions are in document order, earliest first',
+  );
+});
+
+test('the position list is capped but the occurrence count is not', () => {
+  // A generated email can repeat one declaration hundreds of times; the count
+  // stays truthful while the list stays bounded, and their disagreement is the
+  // signal that there are more.
+  const html = Array.from(
+    { length: 25 },
+    (_, i) => `<div style="border-radius:${i}px">x</div>`,
+  ).join('\n');
+  const result = lintEmail(dataset, { html, clients: ['outlook.windows'] });
+
+  const radius = result.findings.find((f) => f.feature === 'css-border-radius');
+  assert.equal(radius.occurrence_count, 25);
+  assert.equal(radius.positions.length, 10);
+  assert.match(radius.positions[0], /^1:/, 'the cap drops the latest, never the earliest');
 });
 
 test('lint never reports passing features', () => {
@@ -361,8 +433,10 @@ test('untested findings are severity "unknown" and carry no false notes', () => 
   for (const finding of untested) {
     assert.equal(finding.severity, 'unknown');
     assert.deepEqual(finding.notes, []);
-    assert.match(finding.guidance, /Not evidence of support/);
   }
+  // Guidance is a legend on the result, keyed by verdict, rather than the same
+  // sentence repeated on every finding.
+  assert.match(result.guidance[UNTESTED], /Not evidence of support/);
 });
 
 test('untested findings can be suppressed', () => {
@@ -441,7 +515,12 @@ test('a feature every tested client supports still reports its untested clients'
   // And it really is untested rather than unsupported: every one of those
   // clients has no stats entry for the feature.
   const feature = dataset.byTitle.get('<div> element');
-  for (const client of div.clients_affected) {
+  // `clients_affected` is compressed against `clients_checked`, so expanding it
+  // is how a caller gets back to identifiers — and doing so here proves the
+  // compression is lossless as well as checking the verdict.
+  const affected = expandClients(dataset, div.clients_affected);
+  assert.equal(affected.length, div.client_count);
+  for (const client of affected) {
     assert.deepEqual(versionsFor(feature, client), [], `${client} should have no data`);
   }
 });
@@ -505,7 +584,7 @@ test('a style-block finding is positioned in document coordinates', () => {
   const html = ['<html>', '<head>', '<style>', '.a { display: flex }', '</style>'].join('\n');
   const result = lintEmail(dataset, { html, clients: ['outlook.windows'] });
   const flex = result.findings.find((f) => f.feature === 'css-display-flex');
-  assert.equal(flex.position.start.line, 4, 'the rule is on document line 4');
+  assert.match(flex.positions[0], /^4:/, 'the rule is on document line 4');
 });
 
 test('a malformed style attribute does not silence the rest of the email', () => {

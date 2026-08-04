@@ -33,7 +33,8 @@ that diff** — it is the review artifact, not noise to commit past.
 
 Finally, bump the version in `package.json` and `mcp/package.json`, move the
 `## Unreleased` heading in `CHANGELOG.md` to the new version with a date, and
-commit.
+commit. The version the MCP server reports over the wire is read from
+`mcp/package.json`, so there is no third place to remember.
 
 ## The skill, to ClawHub
 
@@ -75,6 +76,11 @@ cd mcp
 npm pack --dry-run          # expect src/data/caniemail.json in the listing
 npm publish                 # add --otp=<code> if 2FA is enabled
 ```
+
+`mcp/LICENSE` is a copy of the repo-root one, not a symlink. npm only picks up a
+LICENSE from the *package* root, so without the copy the tarball declared MIT and
+shipped no licence text. It is MIT boilerplate and does not drift; if the root
+one is ever edited, copy it across.
 
 The name is unscoped, so it is public by default; no `--access public` needed.
 npm sets the executable bit on the `bin` entry at install time, which is why

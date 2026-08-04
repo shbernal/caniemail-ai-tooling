@@ -9,37 +9,37 @@
 17:3-17:21	text-align
 18:3-18:25	vertical-align
 19:3-19:13	z-index
-1:1-2:55	CSS comments
+1:1-2:55 (x2)	CSS comments
 24:3-24:28	border-collapse
-25:3-25:19	margin
-26:3-26:20	padding
+25:3-25:19 (x4)	margin
+26:3-26:20 (x3)	padding
 27:3-27:20	font shorthand
 27:3-27:20	font-weight
-31:3-31:19	block-size & inline-size
+31:3-31:19 (x2)	block-size & inline-size
 32:3-32:20	inline-size 
-33:3-33:27	border-inline & border-block
-35:3-35:30	border-inline & border-block individual logical properties
+33:3-33:27 (x4)	border-inline & border-block
+35:3-35:30 (x2)	border-inline & border-block individual logical properties
 37:3-37:29	border-radius logical properties
 38:3-38:26	margin-block-start & margin-block-end
-38:3-38:26	margin-inline & margin-block
-3:1-20:2	Class selector
+38:3-38:26 (x3)	margin-inline & margin-block
+3:1-20:2 (x7)	Class selector
 40:3-40:25	margin-inline-start & margin-inline-end
-41:3-41:21	padding-inline & padding-block
+41:3-41:21 (x2)	padding-inline & padding-block
 42:3-42:28	padding-inline-start & padding-inline-end
 46:3-46:18	column-count
-46:3-46:18	css column properties
-47:3-47:19	gap, column-gap, row-gap
-54:3-54:33	grid-template-* properties
-59:3-59:10	left, right, top, bottom
+46:3-46:18 (x3)	css column properties
+47:3-47:19 (x3)	gap, column-gap, row-gap
+54:3-54:33 (x2)	grid-template-* properties
+59:3-59:10 (x4)	left, right, top, bottom
 5:3-5:25	background
 5:3-5:25	background-color
 66:3-66:27	color-scheme CSS property
 67:3-67:30	accent-color
 68:3-68:23	aspect-ratio
 69:3-69:29	backdrop-filter
-6:3-6:21	border
 6:3-6:21	border-radius
-6:3-6:21	px unit
+6:3-6:21 (x22)	px unit
+6:3-6:21 (x7)	border
 70:3-70:27	mix-blend-mode
 7:3-7:29	box-shadow
 8:3-8:17	display

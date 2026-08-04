@@ -1,13 +1,13 @@
 10:1-10:35	<div> element
 10:6-10:29	<p> element
 10:9-10:25	<span> element
-11:1-11:12	<h1> to <h6> elements
+11:1-11:12 (x3)	<h1> to <h6> elements
 12:1-12:21	<strong> element
 12:39-12:53	<del> element
-13:1-13:22	<ul>, <ol> and <dl>
+13:1-13:22 (x2)	<ul>, <ol> and <dl>
 15:1-15:31	<blockquote> element
 16:1-16:4	<hr> element
-18:1-18:74	HTML5 semantics
+18:1-18:74 (x13)	HTML5 semantics
 1:1-1:15	HTML5 doctype
 23:1-23:39	<video> element
 24:1-24:30	<audio> element
@@ -15,8 +15,8 @@
 25:19-25:37	<input type="text"> element
 25:38-25:72	<select> element
 26:1-26:49	Image maps
-27:1-27:58	height attribute
-27:1-27:58	width attribute
+27:1-27:58 (x2)	height attribute
+27:1-27:58 (x2)	width attribute
 27:29-27:52	Embedded <svg> image
 28:1-28:28	address
 29:1-29:28	<marquee> element

@@ -24,8 +24,10 @@ would return 620KB of JSON — 307 features across 48 clients — and exhaust an
 agent's context before it did anything useful.
 
 - **`lint_email`** — the workhorse. Give it your drafted HTML/CSS and a client
-  list; it returns only what breaks, with source positions, affected clients,
-  documented workarounds, and a link to each feature. Call it before sending.
+  list; it returns only what breaks, with every source position the feature was
+  used at, affected clients, documented workarounds, and a link to each feature.
+  Call it before sending. A realistic newsletter against all 48 clients costs
+  about 10k tokens.
 - **`check_feature_support`** — for deciding *how* to build something. One
   feature, per-client verdicts, roughly 200 tokens instead of the whole file.
 - **`search_features`** — find slugs by keyword. Agents don't know that flexbox

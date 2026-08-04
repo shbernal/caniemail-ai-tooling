@@ -10,9 +10,9 @@
 # invariant a commit can quietly break — core/ and its copies under
 # skill/scripts and mcp/src must stay byte-identical — and until now nothing
 # enforced it except remembering to run `make sync-core`. Both commands are
-# fast (under two seconds together) and read-only, so they always run rather
-# than being scoped to changed paths: a doc-only commit that happens to carry a
-# stale vendored file should still fail.
+# fast (a few seconds together; the suite runs its files in parallel) and
+# read-only, so they always run rather than being scoped to changed paths: a
+# doc-only commit that happens to carry a stale vendored file should still fail.
 pre-commit:
   parallel: true
   commands:

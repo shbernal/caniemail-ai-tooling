@@ -1,13 +1,13 @@
-10:1-19:2	@media
-11:3-14:4	Class selector
-12:5-12:18	display
+10:1-19:2 (x2)	@media
+11:3-14:4 (x4)	Class selector
 12:5-12:18	display:flex
+12:5-12:18 (x2)	display
 13:5-13:24	border
 13:5-13:24	border-radius
-13:5-13:24	px unit
+13:5-13:24 (x3)	px unit
 16:3-18:4	Child combinator
 17:5-17:16	float
-21:1-26:2	@supports
+21:1-26:2 (x2)	@supports
 23:5-23:18	display:grid
 24:5-24:13	gap, column-gap, row-gap
 28:1-35:2	@media (prefers-color-scheme)
@@ -15,7 +15,7 @@
 31:7-31:33	backdrop-filter
 32:7-32:29	mix-blend-mode
 37:1-44:2	@keyframes
-39:5-39:15	opacity
+39:5-39:15 (x2)	opacity
 47:3-47:14	cm unit
 47:3-47:14	margin
 5:1-8:2	@font-face

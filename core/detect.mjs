@@ -80,10 +80,34 @@ class LineIndex {
 }
 
 /**
- * A title and the earliest place it was seen, in one coordinate space.
+ * A range as `line:column-line:column`.
+ *
+ * One string rather than a four-level nested object. Positions are the second
+ * largest thing a lint returns after the client lists, and at 48 clients they
+ * were a tenth of the payload to say what fits in eleven characters. The golden
+ * files pin exactly this rendering, so the fixtures and the tool output cannot
+ * drift apart.
+ *
+ * @param {{start: {line: number, column: number}, end: {line: number, column: number}}} range
+ */
+export function formatPosition(range) {
+  return `${range.start.line}:${range.start.column}-${range.end.line}:${range.end.column}`;
+}
+
+/**
+ * How many positions one title keeps.
+ *
+ * `occurrence_count` is uncapped and truthful; the position list is not, so a
+ * generated email with 400 identical cells cannot blow the payload back up.
+ * When the two disagree there are more sightings than are shown.
+ */
+const MAX_POSITIONS = 10;
+
+/**
+ * A title and every place it was seen, in one coordinate space.
  *
  * Sightings are collected as offsets and resolved to line/column at the end, so
- * "earliest" is a numeric comparison rather than a line-then-column one, and so
+ * ordering is a numeric comparison rather than a line-then-column one, and so
  * CSS found inside a `<style>` block is measured in document coordinates by
  * plain addition instead of the package's `adjustPosition` arithmetic — which
  * it never applied to `<style>` blocks, putting every such finding on the wrong
@@ -100,18 +124,41 @@ class Sightings {
   /** @param {string} title @param {number} start @param {number} end */
   record(title, start, end) {
     if (!this.tables.known.has(title)) return; // A title the dataset dropped.
-    const existing = this.#hits.get(title);
-    if (existing && existing.start <= start) return;
-    this.#hits.set(title, { start, end });
+
+    let hit = this.#hits.get(title);
+    if (!hit) {
+      hit = { ranges: [], count: 0 };
+      this.#hits.set(title, hit);
+    }
+
+    // One construct can satisfy the same matcher twice — `background:
+    // url(a.png), url(b.png)` raises the PNG title once per URL over a single
+    // declaration — so an identical range is one sighting, not two.
+    if (hit.ranges.some((range) => range.start === start && range.end === end)) return;
+
+    hit.count += 1;
+
+    // Kept sorted by offset, because sightings do not arrive in document order:
+    // `detectHtml` walks every element before it descends into any `<style>`
+    // block, so a rule at the top of the document is recorded last. The cap
+    // therefore drops the latest range rather than the newest arrival, which is
+    // what keeps the first position the earliest one.
+    let at = hit.ranges.length;
+    while (at > 0 && hit.ranges[at - 1].start > start) at -= 1;
+    hit.ranges.splice(at, 0, { start, end });
+    if (hit.ranges.length > MAX_POSITIONS) hit.ranges.pop();
   }
 
-  /** @returns {Map<string, {title: string, position: object}>} */
+  /** @returns {Map<string, {title: string, positions: string[], occurrence_count: number}>} */
   resolve() {
     const out = new Map();
-    for (const [title, { start, end }] of this.#hits) {
+    for (const [title, { ranges, count }] of this.#hits) {
       out.set(title, {
         title,
-        position: { start: this.index.locate(start), end: this.index.locate(end) },
+        positions: ranges.map((range) =>
+          formatPosition({ start: this.index.locate(range.start), end: this.index.locate(range.end) }),
+        ),
+        occurrence_count: count,
       });
     }
     return out;
@@ -123,7 +170,7 @@ class Sightings {
  *
  * @param {{features: object[]}} dataset
  * @param {{html?: string, css?: string}} input
- * @returns {Map<string, {title: string, position: object}>}
+ * @returns {Map<string, {title: string, positions: string[], occurrence_count: number}>}
  */
 export function detectFeatures(dataset, { html, css } = {}) {
   const tables = buildTitleTables(dataset.features ?? []);
@@ -131,7 +178,10 @@ export function detectFeatures(dataset, { html, css } = {}) {
 
   // Both inputs are their own coordinate space, so they are collected
   // separately. Standalone CSS wins a tie, matching the order the previous
-  // implementation happened to use — stylesheets before document.
+  // implementation happened to use — stylesheets before document. A title seen
+  // in both therefore reports only the CSS sightings: the two sets of offsets
+  // measure different documents, and interleaving them would produce line
+  // numbers that point into neither.
   if (css) {
     const sightings = new Sightings(css, tables);
     detectStylesheet(css, 0, sightings);

@@ -27,8 +27,9 @@ dataset.
 ## Tools
 
 - **`lint_email`** — give it drafted HTML and/or CSS plus a client list; returns
-  only what breaks, with source positions, affected clients, documented
-  workarounds, and a feature URL. Passing features are never returned.
+  only what breaks, with every source position the feature was used at, affected
+  clients, documented workarounds, and a feature URL. Passing features are never
+  returned.
 - **`check_feature_support`** — per-client verdicts for one feature, for
   deciding how to build something rather than checking what you built.
 - **`search_features`** — find feature slugs by keyword. Slugs are not
@@ -50,7 +51,16 @@ Around a sixth of the matrix is untested. Results also carry `last_test_date`
 and a staleness note, because some entries have not been retested in five years.
 
 Data is fetched from caniemail.com and cached for 24 hours; every result names
-which copy answered via `data_source`.
+which copy answered via `data_source`. The server revalidates as it runs rather
+than loading once at startup, so a session left open for days does not keep
+answering from the copy it fetched on the first morning. Startup itself touches
+no network — the handshake never waits on caniemail.com.
+
+`lint_email` is sized for an agent's context: findings carry `positions` as
+`"line:col-line:col"` strings with an `occurrence_count`, `clients_affected` is
+compressed against the clients you asked for (`"*"`, `"outlook.*"`, with
+`client_count` always exact), and the per-severity advice is a `guidance` legend
+on the result rather than a paragraph repeated on every finding.
 
 ## Scope
 

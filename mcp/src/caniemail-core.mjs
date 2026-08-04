@@ -17,7 +17,7 @@
  * document, and what made 22 features undetectable however many it ran.
  */
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
@@ -160,8 +160,21 @@ export async function loadDataset(options = {}) {
       const raw = await response.json();
       const fetchedAt = new Date().toISOString();
       try {
+        // Written to a per-process temp file and renamed, because the two
+        // surfaces share one cache directory: an MCP server and a CLI run can
+        // refresh at the same moment, and a plain write interleaves them into a
+        // truncated file. The corrupt-cache guard above catches that, so the
+        // cost was a redundant fetch rather than a failure — but rename is
+        // atomic and this is one line.
         await mkdir(cacheDir, { recursive: true });
-        await writeFile(cacheFile, JSON.stringify({ fetchedAt, raw }));
+        const temporary = `${cacheFile}.${process.pid}.tmp`;
+        try {
+          await writeFile(temporary, JSON.stringify({ fetchedAt, raw }));
+          await rename(temporary, cacheFile);
+        } catch (error) {
+          await rm(temporary, { force: true }).catch(() => {});
+          throw error;
+        }
       } catch {
         // An unwritable cache degrades performance, not correctness.
       }
@@ -237,6 +250,13 @@ export function expandClients(dataset, globs) {
   return [...matched].sort();
 }
 
+/**
+ * Deliberately duplicated in `feature-titles.mjs` rather than shared.
+ *
+ * Every core module is vendored into both surfaces by file copy, so a module
+ * that imports a helper drags another file into `CORE_FILES` to save four
+ * lines. Keeping them self-contained is worth more than the deduplication.
+ */
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
@@ -359,15 +379,49 @@ export function checkFeatureSupport(dataset, slug, clientGlobs, options = {}) {
     throw new Error(`Unknown feature "${slug}". Use search_features to find the right slug.`);
   }
   const clients = expandClients(dataset, clientGlobs);
+  const pinned = options.version ?? null;
+
+  // "Does this work in Outlook 2016" is the question people actually have, and
+  // its natural spelling is `outlook.*` with `--version 2016`. Letting
+  // `resolveSupport` throw across a fan-out made that fail on the first sibling
+  // that versions itself by date, naming a client the caller never asked about.
+  // A pin no requested client carries is still an error — that is a typo — but
+  // one that only some carry is resolved per client.
+  if (pinned && !clients.some((client) => versionsFor(feature, client).includes(pinned))) {
+    const withData = clients.find((client) => versionsFor(feature, client).length > 0);
+    // Guaranteed to throw: the pin is absent from this client's keys. Going
+    // through `resolveSupport` keeps one wording, and one place that knows how
+    // to list what is on record. With no client carrying any version at all
+    // there is nothing to correct the caller with, and every entry below is
+    // untested anyway.
+    if (withData) resolveSupport(feature, withData, { version: pinned });
+  }
 
   const support = clients.map((client) => {
+    const onRecord = versionsFor(feature, client);
+
+    if (pinned && !onRecord.includes(pinned)) {
+      // No data for the version asked about is precisely `untested`: not
+      // supported, not unsupported, nothing on record. `notes` stays empty
+      // because an untested verdict has no findings to report, and
+      // `versions_on_record` already shows why the pin did not land.
+      return {
+        client,
+        verdict: UNTESTED,
+        version: null,
+        version_requested: pinned,
+        notes: [],
+        versions_on_record: onRecord,
+      };
+    }
+
     const resolved = resolveSupport(feature, client, options);
     return {
       client,
       verdict: resolved.verdict,
       version: resolved.version,
       notes: resolved.notes,
-      versions_on_record: versionsFor(feature, client),
+      versions_on_record: onRecord,
     };
   });
 
@@ -380,6 +434,8 @@ export function checkFeatureSupport(dataset, slug, clientGlobs, options = {}) {
     last_test_date: feature.last_test_date,
     staleness: stalenessOf(feature.last_test_date),
     feature_notes: featureNotes(feature),
+    // Stated once so the pin is visible without reading 48 entries to infer it.
+    version_requested: pinned,
     summary: summarise(support),
     support,
     data_source: dataset.meta,
@@ -533,7 +589,7 @@ export function lintEmail(dataset, options) {
   const detected = detectFeatures(dataset, { html, css });
 
   const findings = [];
-  for (const { title, position } of detected.values()) {
+  for (const { title, positions, occurrence_count: occurrences } of detected.values()) {
     const feature = dataset.byTitle.get(title);
     if (!feature) continue; // Detected something the dataset no longer describes.
 
@@ -565,14 +621,14 @@ export function lintEmail(dataset, options) {
         title: feature.title,
         severity: SEVERITY_BY_VERDICT[verdict],
         verdict,
-        clients_affected: affected,
+        clients_affected: summariseClients(affected, clients),
         client_count: affected.length,
         notes: verdict === UNTESTED ? [] : [...bucket.notes],
         feature_notes: verdict === UNTESTED ? null : featureNotes(feature),
-        position: position ?? null,
+        positions,
+        occurrence_count: occurrences,
         url: feature.url,
         last_test_date: feature.last_test_date,
-        guidance: GUIDANCE_BY_VERDICT[verdict],
       });
     }
   }
@@ -592,8 +648,61 @@ export function lintEmail(dataset, options) {
     findings,
     summary: { ...counts, total: findings.length },
     passed: counts.error === 0,
+    // A legend, not per-finding text. These are three constant strings, and a
+    // lint of a realistic newsletter against every client returns 78 findings —
+    // repeating them there cost a tenth of the payload to say the same thing 78
+    // times. Look the finding's `verdict` up here.
+    guidance: { ...GUIDANCE_BY_VERDICT },
     data_source: dataset.meta,
   };
+}
+
+/**
+ * Compress a client list against the set that was actually checked.
+ *
+ * `["*"]` when every checked client is affected, and `"<family>.*"` when every
+ * checked member of a family is. At 48 clients the written-out lists were a
+ * fifth of a lint's payload, most of it the same identifiers repeated once per
+ * finding.
+ *
+ * The globs expand against `clients_checked`, never against the full roster —
+ * that is what makes this lossless rather than an approximation. `client_count`
+ * is the exact number either way, so nothing has to expand them to count.
+ *
+ * A set with a single checked member is named outright, at both levels: `*` and
+ * `gmail.*` are shorter than the identifier they replace, but a wildcard reads
+ * as a claim about a group when only one of its members was ever looked at.
+ *
+ * Expect less from the per-family case than it looks like it should give. Real
+ * affected sets are usually *partial* within a family — a feature unsupported in
+ * three of seven Outlook clients rolls up to nothing — so on a realistic lint it
+ * is the `["*"]` case that does most of the work.
+ */
+function summariseClients(affected, checked) {
+  if (checked.length > 1 && affected.length === checked.length) return ['*'];
+
+  const checkedPerFamily = new Map();
+  for (const client of checked) {
+    const family = client.split('.')[0];
+    checkedPerFamily.set(family, (checkedPerFamily.get(family) ?? 0) + 1);
+  }
+
+  const affectedPerFamily = new Map();
+  for (const client of affected) {
+    const family = client.split('.')[0];
+    if (!affectedPerFamily.has(family)) affectedPerFamily.set(family, []);
+    affectedPerFamily.get(family).push(client);
+  }
+
+  const out = [];
+  for (const [family, members] of affectedPerFamily) {
+    if (members.length > 1 && members.length === checkedPerFamily.get(family)) {
+      out.push(`${family}.*`);
+    } else {
+      out.push(...members);
+    }
+  }
+  return out.sort();
 }
 
 const SEVERITY_BY_VERDICT = {

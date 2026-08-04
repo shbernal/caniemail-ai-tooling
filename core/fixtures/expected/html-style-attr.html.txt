@@ -1,11 +1,11 @@
 10:12-10:35	mix-blend-mode
 1:1-11:7	<body> element
-2:1-2:64	<div> element
-2:13-2:25	display
+2:1-2:64 (x8)	<div> element
 2:13-2:25	display:flex
+2:13-2:25 (x2)	display
 2:27-2:44	border
 2:27-2:44	border-radius
-2:27-2:44	px unit
+2:27-2:44 (x3)	px unit
 3:13-3:25	display:grid
 3:27-3:35	gap, column-gap, row-gap
 4:13-4:43	PNG image format

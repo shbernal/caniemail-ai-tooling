@@ -1,15 +1,15 @@
 10:1-10:29	BMP image format
 11:1-11:30	Animated PNG image format
 12:1-12:29	HEIF image format
-16:1-16:79	srcset and sizes attributes
+16:1-16:79 (x3)	srcset and sizes attributes
 17:1-21:10	<picture> element
 1:1-22:7	<body> element
-2:1-2:27	<img> element
-2:1-2:27	PNG image format
-3:1-3:28	JPG image format
+2:1-2:27 (x16)	<img> element
+2:1-2:27 (x4)	PNG image format
+3:1-3:28 (x2)	JPG image format
 4:1-4:27	GIF image format
 5:1-5:29	SVG image format
-6:1-6:30	webP image format
-7:1-7:28	AVIF image format
+6:1-6:30 (x3)	webP image format
+7:1-7:28 (x2)	AVIF image format
 8:1-8:28	TIFF image format
 9:1-9:30	ICO image format

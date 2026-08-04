@@ -179,6 +179,15 @@ The pieces:
   `detect.mjs`. CSS inside a `<style>` block is put into document coordinates by
   adding the block's start offset. Do not reintroduce line/column arithmetic —
   it is what produced wrong line numbers for every `<style>` finding before.
+- `detectFeatures` returns `positions` (rendered `"line:col-line:col"` by
+  `formatPosition`, which the goldens also use) and an `occurrence_count`, per
+  title. **The count is uncapped and the list is not** — it stops at ten, so a
+  generated email cannot inflate the payload, and a disagreement between the two
+  is how a caller knows there are more. The first position is always the
+  earliest, which is what lets `differential.test.mjs` keep comparing against
+  upstream's single position. A title seen in both the `html` and `css` inputs
+  reports only the CSS sightings: they are separate coordinate spaces and
+  interleaving them would produce line numbers pointing into neither.
 - Both scanners are **tolerant and never throw.** This is not defensive coding.
   Email markup is routinely unclosed, unquoted and truncated, and one malformed
   `style` attribute used to void the entire lint.
@@ -218,7 +227,16 @@ is the review artifact.
 
 - Node 22+. The core has **no runtime dependencies**. Do not add one — the
   no-install property of `skill/` depends on it, and `mcp/` should carry nothing
-  beyond the MCP SDK and `zod`.
+  beyond the MCP SDK and `zod`. pnpm's isolated `node_modules` enforces this for
+  `mcp/`; `skill/` has no `node_modules` to be isolated from, so a test in
+  `core/skill-cli.test.mjs` asserts every vendored module imports only `node:`
+  builtins and relative paths.
+- **Both surfaces are executed by tests, not just the core.** `mcp/smoke.mjs`
+  (`make smoke`) drives the MCP server over real stdio; `core/skill-cli.test.mjs`
+  spawns the skill CLI. Each has its own argument handling that the core suite
+  cannot reach. `core/skill-cli.test.mjs` lives in `core/` deliberately — it is
+  not in `CORE_FILES`, so it is never vendored, and `skill/` stays at exactly the
+  nine published files.
 - Tests use `node:test`, run offline against `core/data/caniemail.json`, and
   stay deterministic. Network tests are gated behind `CANIEMAIL_TEST_NETWORK=1`
   and excluded from the default target.
@@ -227,6 +245,15 @@ is the review artifact.
   primary source. (This replaces an earlier "no dataset is committed" rule,
   which existed only because the npm package supplied the fallback for free.)
 - Every tool result carries `data_source` so a stale answer is visibly stale.
+  That obliges a long-lived process to **revalidate rather than load once**: the
+  MCP server holds a dataset for 15 minutes at a time, because a server that
+  loads at startup and never refetches reports `source: "live"` for as long as
+  the editor stays open. Its startup reads only the bundled snapshot, so the
+  handshake never waits on the network.
+- Tool output is **compact JSON, and sized for a context window**. Both surfaces
+  drop indentation when nothing human is reading (the CLI keeps it at a TTY);
+  repeated constants become one legend on the result, and client lists compress
+  against the set that was checked. Indentation alone was 28% of a lint.
 - Author metadata is `shbernal`.
 
 ## Scope

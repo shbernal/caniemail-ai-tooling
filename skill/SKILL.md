@@ -62,6 +62,17 @@ Never report an untested feature as working.
 Also check `last_test_date` and `staleness`. Some entries have not been retested
 in five years, and the tool tells you when a verdict is old enough to distrust.
 
+## Reading a lint finding
+
+- `positions` — every place the feature is used, as `"line:col-line:col"`.
+  `occurrence_count` is the true total; the list stops at ten, so when the two
+  disagree there are more than you can see.
+- `clients_affected` — compressed against the clients you asked for. `"*"` means
+  all of them, `"outlook.*"` means all the ones you asked for in that family.
+  `client_count` is always the exact number, so you never have to expand them.
+- `guidance` — a legend on the result keyed by verdict, not a field on every
+  finding. Look up the finding's `verdict` there.
+
 ## Commands
 
 ```bash
@@ -77,9 +88,11 @@ either segment: `outlook.windows`, `outlook.*`, `*.ios`, or `*` for all 48.
 `lint` reads stdin as HTML when given neither `--html` nor `--css`, so
 `cat draft.html | node scripts/caniemail.mjs lint --clients '*'` works.
 
-`check --version` pins a specific client version instead of the newest —
-`--version 2016` answers "does this work in Outlook 2016", which is usually the
-real question.
+`check --version` pins a specific client version instead of the newest, and
+works with globs: `check css-border-radius --clients outlook.* --version 2016`
+answers "does this work in Outlook 2016", which is usually the real question.
+Clients with no such version on record come back `untested` with
+`version_requested` set — only a version *no* requested client has is an error.
 
 ### Clients worth knowing
 

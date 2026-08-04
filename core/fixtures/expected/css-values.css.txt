@@ -1,38 +1,38 @@
-10:3-10:33	border
+10:3-10:33 (x2)	border
 11:3-11:20	filter
 12:3-12:35	transform
 15:3-15:30	CSS Variables (Custom Properties)
-15:3-15:30	outline
-19:3-19:24	display
+15:3-15:30 (x2)	outline
+19:3-19:24 (x4)	display
 1:1-1:81	CSS comments
 24:3-24:18	initial unit
-24:3-24:18	margin
-25:3-25:17	padding
+24:3-24:18 (x2)	margin
+25:3-25:17 (x2)	padding
 26:3-26:19	position
-2:1-16:2	Class selector
+2:1-16:2 (x7)	Class selector
 30:3-30:16	display:flex
 34:3-34:16	display:grid
 38:3-38:16	display:none
-3:3-3:27	% unit
 3:3-3:27	CSS calc() function
-3:3-3:27	px unit
-3:3-3:27	width property
-42:3-42:21	fit-content, min-content, max-content
+3:3-3:27 (x4)	width property
+3:3-3:27 (x5)	% unit
+3:3-3:27 (x7)	px unit
+42:3-42:21 (x3)	fit-content, min-content, max-content
 45:3-45:47	system-ui, ui-serif, ui-sans-serif, ui-rounded, ui-monospace
-4:3-4:26	height property
 4:3-4:26	min()
+4:3-4:26 (x3)	height property
 50:3-50:14	em unit
 51:3-51:15	rem unit
 52:3-52:15	ex unit
 53:3-53:18	pt unit
 54:3-54:19	line-height
 55:3-55:11	cm unit
-55:3-55:11	left, right, top, bottom
+55:3-55:11 (x4)	left, right, top, bottom
 56:3-56:12	mm unit
 57:3-57:13	in unit
 58:3-58:14	pc unit
 5:3-5:29	max()
-5:3-5:29	max-width
+5:3-5:29 (x3)	max-width
 60:3-60:19	min-height property
 60:3-60:19	vh unit
 61:3-61:22	ch unit
@@ -41,11 +41,11 @@
 63:3-63:22	vmin unit
 64:3-64:23	vmax unit
 6:3-6:36	clamp()
-6:3-6:36	font shorthand
-6:3-6:36	font-size
-6:3-6:36	vw unit
-7:3-7:52	background
+6:3-6:36 (x2)	vw unit
+6:3-6:36 (x3)	font-size
+6:3-6:36 (x4)	font shorthand
 7:3-7:52	linear-gradient()
+7:3-7:52 (x3)	background
 8:3-8:56	background-image
 8:3-8:56	radial-gradient()
 9:3-9:22	rgb()
