@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- The MCP server keeps its feature array across a revalidation that finds
+  upstream unmoved, so the memoised title tables survive with it, while still
+  adopting the fresh `meta` — `data_source` has to keep telling the truth about
+  `source` and `fetchedAt`, which is the thing the 15-minute revalidation exists
+  to get right. Measured at about 1ms per revalidation and no more: the parse
+  and the index still happen. It is here because unmoved data being the same
+  dataset is worth saying, not for the microseconds.
+
 - The dataset cache is covered by tests. It was the least-tested code in the
   repo and it is what implements the promise that a stale answer is visibly
   stale: `meta.source` and `meta.warning` are computed nowhere else, every path
