@@ -1,8 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 — 2026-08-04
 
-Initial implementation. Nothing published yet.
+First release. The skill ships to ClawHub as `email-compat`, the MCP server to
+npm as `mcp-server-caniemail`. The two are independent artifacts on independent
+channels; `docs/releasing.md` has the process for each.
 
 - Shared core (`core/`) resolving caniemail support data with all four verdicts
   intact: `supported`, `unsupported`, `mitigated`, `untested`. Zero runtime

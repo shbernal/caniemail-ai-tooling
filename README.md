@@ -53,12 +53,13 @@ retested in five years.
 ## Install the skill
 
 ```bash
-npx skills add shbernal/caniemail-ai-tooling
+clawhub install email-compat          # from ClawHub
+npx skills add shbernal/caniemail-ai-tooling   # or straight from this repo
 ```
 
-Add `-g` for `~/.claude/skills/` instead of the current project. There is no
-install step — the skill has no dependencies, and Node 22+ is the whole
-requirement.
+`skills` takes `-g` for `~/.claude/skills/` instead of the current project.
+Either way there is no install step afterwards — the skill has no dependencies,
+and Node 22+ is the whole requirement.
 
 Or point your agent at the CLI directly:
 
