@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Dependency updates are automated. Dependabot watches npm weekly from the
+  workspace root — which is the only correct entry for a pnpm workspace, since
+  Dependabot resolves every member from the directory holding the lockfile and
+  rejects a second entry pointing inside it — plus the GitHub Actions pins in
+  CI, which nothing else ever looks at. Minor and patch bumps group into one PR
+  per ecosystem; majors stay separate, because an MCP SDK major is a surface
+  change to review rather than a bump to merge.
+
 - `lint_email` costs about half what it did. A realistic newsletter against all
   48 clients went from 75KB to 41KB — roughly 19k tokens to 10k — with nothing
   removed from the result. Both surfaces now emit compact JSON (the CLI still

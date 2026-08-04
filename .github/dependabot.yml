@@ -1,0 +1,40 @@
+version: 2
+
+updates:
+  # One npm entry, at the root, covering both package trees.
+  #
+  # This is not a shortcut — it is the only correct shape for a pnpm workspace.
+  # Dependabot resolves every workspace member from the directory holding
+  # `pnpm-workspace.yaml` and `pnpm-lock.yaml`, so the root entry already updates
+  # `mcp/package.json`. Adding a second entry for `/mcp` does not split the work:
+  # Dependabot detects the workspace manifests in the parent directory and fails
+  # the job as misconfigured (dependabot-core#11487).
+  #
+  # `@modelcontextprotocol/sdk` is the dependency this exists for — it is pinned
+  # by the lockfile and a new minor would otherwise never surface. `caniemail` is
+  # only a devDependency, but it is the differential suite's oracle, so a release
+  # there is information about our own port, not just an upgrade to take.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # Routine bumps arrive as one PR that CI either passes or does not.
+      # Majors are deliberately left out of the group: an SDK major changes the
+      # surface we adapt to, and that is a review, not a merge.
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
+
+  # The CI workflow pins `actions/checkout@v5`, `pnpm/action-setup@v4` and
+  # friends. Nothing else ever looks at those pins, so they go stale silently.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      minor-and-patch:
+        update-types:
+          - minor
+          - patch
