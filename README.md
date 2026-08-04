@@ -112,6 +112,13 @@ So this project uses the package as a parser and resolves every verdict itself,
 against the raw dataset, with the four verdicts intact and no re-sorting. The
 core suite has a regression test for each defect.
 
+One limitation survives that split. The package surfaces a feature only when
+some client does not fully support it, so 22 of 307 features — `<div>`,
+`<table>`, `px unit`, `PNG image format` and similar universals — are never
+detected in the first place, and `lint_email` therefore cannot report them as
+untested on the 6–7 clients that have no data for them. Lookups
+(`check_support`, `client_matrix`) are unaffected; only linting is.
+
 It also fetches live data from caniemail.com rather than relying on the copy
 bundled in the package, which tracks an irregular release cadence — eight months
 between two recent releases — and was 68 days behind the site at time of

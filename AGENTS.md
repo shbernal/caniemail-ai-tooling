@@ -57,9 +57,29 @@ tests the transport and tool registrations, which the core suite does not cover.
 
 ## The correctness rule
 
-**Never delegate a support verdict to the `caniemail` package.** It is used for
-one thing — parsing HTML/CSS and detecting which features appear — and its own
-resolution is wrong in three ways that this core exists to correct:
+**The `caniemail` package is a parser. It is never a data source, and never a
+resolver.** Both halves of that are load-bearing:
+
+- **Not a data source.** The dataset comes from
+  `https://www.caniemail.com/api/data.json`, fetched at runtime and cached. The
+  copy bundled in the package is the offline fallback only, and `meta.source`
+  always names which copy answered. Do not read `caniemail.json` as the primary.
+- **Not a resolver.** `resolveSupport` owns every verdict. Nothing reaching an
+  output may come from `getSupportType`, `getAllFeatures`, or the `support`
+  field on a package issue — only `issue.title` and `issue.position`.
+
+What we take from it is the one thing it does well: turning HTML and CSS into
+feature titles with `{line, column}` positions. That is ~760 lines of mapping
+over `htmlparser2`, `@adobe/css-tools` and `css-what`, covering CSS properties,
+property/value pairs, functions, keywords, units, at-rules and selector shapes;
+HTML elements, attributes and element+attribute pairs; and image formats read
+out of `src`, `srcset` and `url()`. It reaches all but three of the 307
+features, and the tables derive from feature titles by convention rather than
+being a static list, so they do not rot against upstream. Reimplementing that is
+not worth it; delegating a verdict to it is never worth it.
+
+The resolver half of the rule is not stylistic. The package's resolution is
+wrong in three ways this core exists to correct:
 
 1. `getSupportType` merges `u` (untested) into `'partial'` alongside `a`
    (mitigated). 900 of its 1,637 partial verdicts are actually untested.
@@ -67,13 +87,26 @@ resolution is wrong in three ways that this core exists to correct:
    chronological order. **Never sort version keys — take the last one as
    authored.** `outlook.macos` is `["2011", "2016", "16.80"]`; every sort picks
    the wrong one. 280 cells are affected.
+
+   "As authored" rests on one assumption worth knowing: `Object.keys` hoists
+   integer-like keys to the front in ascending numeric order, so `"2011"` and
+   `"2016"` are ordered by value, not by how they were written. 611 cells have
+   two or more such keys and all are already ascending, which makes the hoisting
+   a no-op — and it stays one as long as upstream authors year-style keys
+   chronologically. If that ever breaks, the fix is to read key order from the
+   raw JSON text, not to reintroduce a sort.
 3. It throws `RangeError` when a (feature, client) pair has no stats entry, and
    16% have none. Missing data is `untested`, never an exception and never
-   `unsupported`.
+   `unsupported`. (Reported upstream as shellscape/caniemail#8, open and
+   unanswered since 2026-06-05.)
 
 Each has a regression test in `core/caniemail-core.test.mjs`, written against
 *our* behaviour so it survives an upstream fix. If a change makes one of those
 tests fail, the change is wrong, not the test.
+
+Only (3) actually taxes us, and only because `checkFeatures` resolves support
+just to decide whether to record an issue — which is what drags a broken
+resolver into an otherwise clean parse. (1) and (2) never touch our output.
 
 The related invariant: the four verdicts (`supported`, `unsupported`,
 `mitigated`, `untested`) must survive into every output. Do not collapse them
@@ -92,7 +125,31 @@ unions the results. Both halves are load-bearing:
   can prevent it.
 
 Do not "optimise" this into a single call with all clients — that is exactly the
-call that throws.
+call that throws. Nor into a small "cover set" of the nine clients whose stats
+are complete: `outlook.windows` + `gmail.android` + `yahoo.desktop-webmail`
+reaches only 269 of 307 features, and the 38 it misses are exactly the ones
+below. The full loop costs ~28ms warm. Leave it alone.
+
+### The detection floor
+
+Because the package only records an issue when *some* probed client resolves to
+non-full, a feature that every client with stats rates `y` can never be
+detected. 22 of 307 features are in that state, and every one of them also has
+6–7 clients with no stats at all — which `resolveSupport` correctly calls
+`untested`:
+
+```
+<div> <p> <span> <table> <strong> <del> <h1>-<h6> valign vertical-align
+px pt em ex cm mm in pc % units    PNG    JPG
+```
+
+So `lint_email` does not report those untested verdicts, even with
+`includeUntested: true`. This is a known gap, not a design decision — it is the
+one place the four-verdict invariant is not fully honoured end to end. In
+practice it is the most benign 22 features in the dataset (`<div>` untested on
+`laposte.android` is noise), which is why it is documented rather than fixed.
+If it ever needs fixing, the fix is a title-independent detection pass, not a
+change to the client loop.
 
 ## Conventions
 

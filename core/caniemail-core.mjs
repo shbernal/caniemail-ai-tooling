@@ -520,13 +520,21 @@ export function searchFeatures(dataset, query, options = {}) {
  *    markup 14 of 48 clients throw, and the documented `['*']` glob always does.
  *
  * So: run each client independently, swallow the ones that throw, and union
- * what survives. A feature is missed only if *every* client that would reveal
- * it also crashes on it, which cannot happen — a client crashes precisely
- * because it lacks that feature's data, and the clients that have it do not.
+ * what survives. No crash can hide a feature: a client throws precisely because
+ * it lacks that feature's data, and the clients that have it still report it.
  *
  * Detection is therefore client-independent, which is what lets us resolve
  * verdicts ourselves for all 48 clients, including the ones the package cannot
- * process at all. Cost is ~25ms for a realistic email.
+ * process at all. Cost is ~28ms for a realistic email.
+ *
+ * One class of feature is invisible regardless, and it is not the crashes. The
+ * package records an issue only when a probed client resolves to non-full, so a
+ * feature that every client with stats rates `y` is never reported by any
+ * client. 22 of 307 are in that state — `<div>`, `<table>`, `px unit`, `PNG
+ * image format` and the like — and each also has 6-7 clients with no stats,
+ * which we would call `untested`. Those untested findings never surface. See
+ * "The detection floor" in AGENTS.md; fixing it means detecting titles
+ * ourselves, not changing this loop.
  *
  * @returns {Map<string, {title: string, position: object|undefined}>}
  */
