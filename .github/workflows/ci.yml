@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# The network test is deliberately absent: it hits www.caniemail.com, so a
+# caniemail.com outage must not read as a broken commit. Everything here runs
+# offline against core/data/caniemail.json.
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['22', '24']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # devDependencies only — the shipped core has none. The `caniemail`
+      # package is here for the differential suite and nothing else.
+      - run: npm ci
+
+      # The vendored copies under skill/scripts and mcp/src must stay
+      # byte-identical to core/. This is the gate that catches a core edit
+      # committed without `make sync-core`.
+      - name: Check vendored copies match the core
+        run: make check-vendor
+
+      # Includes the differential suite, which also pins detection output
+      # against core/fixtures/expected.
+      - name: Run the core suite
+        run: make test
+
+      - name: Install MCP dependencies
+        run: npm ci --prefix mcp
+
+      # Covers the transport and tool registrations, which the core suite
+      # does not reach.
+      - name: Drive the MCP server over stdio
+        run: make smoke

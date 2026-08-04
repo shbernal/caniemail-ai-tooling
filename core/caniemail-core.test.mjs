@@ -534,7 +534,7 @@ test('markup inside a conditional comment is not reported as the document’s', 
 /* Network                                                                     */
 /* -------------------------------------------------------------------------- */
 
-test('live fetch returns a newer dataset than the bundle', { skip: !process.env.CANIEMAIL_TEST_NETWORK }, async () => {
+test('live fetch never returns an older dataset than the bundle', { skip: !process.env.CANIEMAIL_TEST_NETWORK }, async () => {
   const live = await loadDataset({ maxAgeMs: 0 });
   assert.ok(['live', 'cache'].includes(live.meta.source));
   assert.equal(live.meta.warning, null);

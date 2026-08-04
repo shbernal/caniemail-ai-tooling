@@ -5,6 +5,15 @@
   "type": "module",
   "author": "shbernal",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shbernal/caniemail-ai-tooling.git",
+    "directory": "mcp"
+  },
+  "homepage": "https://github.com/shbernal/caniemail-ai-tooling#readme",
+  "bugs": {
+    "url": "https://github.com/shbernal/caniemail-ai-tooling/issues"
+  },
   "keywords": [
     "mcp",
     "modelcontextprotocol",

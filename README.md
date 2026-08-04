@@ -171,6 +171,10 @@ make smoke          # drives the MCP server over real stdio JSON-RPC
 make check-vendor   # the vendored copies match the core, byte for byte
 ```
 
+CI runs all of these except `test-network` on Node 22 and 24. If you are
+contributing, `npx lefthook install` wires `make test` and `make check-vendor`
+into a pre-commit hook so a stale vendored copy cannot be committed.
+
 ## Scope
 
 Rendering only — whether markup displays correctly in a given client. Nothing

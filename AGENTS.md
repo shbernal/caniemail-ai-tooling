@@ -70,6 +70,12 @@ make smoke          # drive the MCP server over real stdio JSON-RPC
 
 Run `make sync-core test check-vendor` before committing any core change.
 
+`make test` and `make check-vendor` also run as a lefthook `pre-commit` hook, so
+a forgotten `make sync-core` fails the commit rather than reaching a surface.
+Install the hooks once per clone with `npm install && npx lefthook install`; the
+same two gates run again in CI. `make sync-core` is deliberately *not* automated
+— vendoring is a decision to record in the commit, not a side effect of it.
+
 `make smoke` needs `mcp/node_modules`, so run `npm install` in `mcp/` first. It
 tests the transport and tool registrations, which the core suite does not cover.
 
