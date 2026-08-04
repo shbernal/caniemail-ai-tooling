@@ -13,7 +13,7 @@
     "test": "node --test 'core/*.test.mjs'",
     "test:network": "CANIEMAIL_TEST_NETWORK=1 node --test 'core/*.test.mjs'"
   },
-  "dependencies": {
+  "devDependencies": {
     "caniemail": "^2.0.2"
   }
 }

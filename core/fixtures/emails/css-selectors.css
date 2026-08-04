@@ -1,0 +1,83 @@
+/* One rule per selector shape, so a false positive is attributable. */
+p {
+  color: red;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.klass {
+  color: red;
+}
+
+#ident {
+  color: red;
+}
+
+[data-role] {
+  color: red;
+}
+
+[href^="https"] {
+  color: red;
+}
+
+.one.two {
+  color: red;
+}
+
+.parent .descendant {
+  color: red;
+}
+
+.parent > .child {
+  color: red;
+}
+
+.a + .adjacent {
+  color: red;
+}
+
+.a ~ .sibling {
+  color: red;
+}
+
+.grouped-one,
+.grouped-two {
+  color: red;
+}
+
+a:hover {
+  color: red;
+}
+
+li:first-child {
+  color: red;
+}
+
+p:not(.excluded) {
+  color: red;
+}
+
+input:checked {
+  color: red;
+}
+
+.nesting {
+  color: red;
+
+  & .inner {
+    color: blue;
+  }
+}
+
+/* Adversarial: neither of these contains a real combinator or attribute
+   selector, and a regex-based detector reports both. */
+[title="a > b"] {
+  color: red;
+}
+
+.safe:not(.x + .y) {
+  color: red;
+}

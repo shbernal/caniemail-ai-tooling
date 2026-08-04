@@ -1,0 +1,65 @@
+/* Functions, keywords, units, property/value pairs and bare property values. */
+.functions {
+  width: calc(100% - 20px);
+  height: min(100px, 50%);
+  max-width: max(300px, 40%);
+  font-size: clamp(12px, 2vw, 18px);
+  background: linear-gradient(to right, #fff, #000);
+  background-image: radial-gradient(circle, #fff, #000);
+  color: rgb(255 0 0);
+  border-color: hsl(120 50% 50%);
+  filter: blur(4px);
+  transform: translate(10px, 20px);
+  content: attr(data-x);
+  --brand: #c00;
+  outline-color: var(--brand);
+}
+
+.keywords {
+  display: inline-block;
+  width: auto;
+  color: currentColor;
+  background: transparent;
+  font-size: inherit;
+  margin: initial;
+  padding: unset;
+  position: revert;
+}
+
+.pairs {
+  display: flex;
+}
+
+.pairs-more {
+  display: grid;
+}
+
+.pairs-inline {
+  display: none;
+}
+
+.property-values {
+  width: fit-content;
+  height: max-content;
+  max-width: min-content;
+  font-family: system-ui, ui-serif, sans-serif;
+}
+
+.units {
+  width: 10px;
+  height: 2em;
+  margin: 1rem;
+  padding: 3ex;
+  font-size: 12pt;
+  line-height: 1.5;
+  top: 5cm;
+  left: 6mm;
+  right: 7in;
+  bottom: 8pc;
+  max-width: 50%;
+  min-height: 20vh;
+  letter-spacing: 1ch;
+  word-spacing: 2vw;
+  border-width: 4vmin;
+  outline-width: 5vmax;
+}

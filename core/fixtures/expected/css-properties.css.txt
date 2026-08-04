@@ -1,0 +1,46 @@
+10:3-10:15	height property
+11:3-11:14	% unit
+11:3-11:14	width property
+12:3-12:19	list-style
+13:3-13:15	opacity
+14:3-14:21	outline
+15:3-15:19	overflow
+16:3-16:21	position
+17:3-17:21	text-align
+18:3-18:25	vertical-align
+19:3-19:13	z-index
+1:1-2:55	CSS comments
+24:3-24:28	border-collapse
+25:3-25:19	margin
+26:3-26:20	padding
+27:3-27:20	font shorthand
+27:3-27:20	font-weight
+31:3-31:19	block-size & inline-size
+32:3-32:20	inline-size 
+33:3-33:27	border-inline & border-block
+35:3-35:30	border-inline & border-block individual logical properties
+37:3-37:29	border-radius logical properties
+38:3-38:26	margin-block-start & margin-block-end
+38:3-38:26	margin-inline & margin-block
+3:1-20:2	Class selector
+40:3-40:25	margin-inline-start & margin-inline-end
+41:3-41:21	padding-inline & padding-block
+42:3-42:28	padding-inline-start & padding-inline-end
+46:3-46:18	column-count
+46:3-46:18	css column properties
+47:3-47:19	gap, column-gap, row-gap
+54:3-54:33	grid-template-* properties
+59:3-59:10	left, right, top, bottom
+5:3-5:25	background
+5:3-5:25	background-color
+66:3-66:27	color-scheme CSS property
+67:3-67:30	accent-color
+68:3-68:23	aspect-ratio
+69:3-69:29	backdrop-filter
+6:3-6:21	border
+6:3-6:21	border-radius
+6:3-6:21	px unit
+70:3-70:27	mix-blend-mode
+7:3-7:29	box-shadow
+8:3-8:17	display
+9:3-9:14	float

@@ -1,0 +1,71 @@
+/* Plain properties, shorthands, and every logical-property family that the
+   title tables carry a hardcoded special case for. */
+.basics {
+  color: red;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px #000;
+  display: block;
+  float: left;
+  height: 40px;
+  width: 100%;
+  list-style: none;
+  opacity: 0.5;
+  outline: 1px solid;
+  overflow: hidden;
+  position: absolute;
+  text-align: center;
+  vertical-align: middle;
+  z-index: 3;
+}
+
+.prefix-match {
+  /* "border" matches border-radius via the `startsWith(value + "-")` rule. */
+  border-collapse: collapse;
+  margin-top: 12px;
+  padding-left: 4px;
+  font-weight: bold;
+}
+
+.logical {
+  block-size: 10px;
+  inline-size: 10px;
+  border-inline: 1px solid;
+  border-block: 1px solid;
+  border-block-end: 1px solid;
+  border-inline-start-width: 2px;
+  border-end-end-radius: 4px;
+  margin-block-start: 1px;
+  margin-inline: 2px;
+  margin-inline-end: 3px;
+  padding-block: 1px;
+  padding-inline-start: 2px;
+}
+
+.columns {
+  column-count: 2;
+  column-gap: 10px;
+  columns: 2 auto;
+  gap: 8px;
+  row-gap: 4px;
+}
+
+.grid {
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas: "a b";
+}
+
+.edges {
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+}
+
+.scheme {
+  color-scheme: light dark;
+  accent-color: rebeccapurple;
+  aspect-ratio: 16 / 9;
+  backdrop-filter: blur(2px);
+  mix-blend-mode: multiply;
+}

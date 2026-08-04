@@ -1,0 +1,33 @@
+/* Malformed input must degrade, never throw. Upstream parses in silent mode. */
+.unterminated-rule {
+  color: red;
+  display: flex
+
+.stray-brace } .after-brace { border-radius: 4px; }
+
+.string-with-braces {
+  content: "} not a brace {";
+  background: url("a}b.png");
+}
+
+.comment-inside {
+  color: /* mid-declaration */ red;
+  /* whole-declaration comment */
+  display: grid;
+}
+
+.missing-colon {
+  color red;
+  float: left;
+}
+
+.empty {
+}
+
+.semicolons {;;
+  opacity: 0.5;;
+}
+
+@media (max-width: 600px) {
+  .unclosed-at-rule {
+    display: flex;

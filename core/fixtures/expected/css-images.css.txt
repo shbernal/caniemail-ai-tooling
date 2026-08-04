@@ -1,0 +1,12 @@
+11:3-11:39	GIF image format
+15:3-15:39	webP image format
+19:3-19:36	SVG image format
+1:1-1:67	CSS comments
+23:3-23:37	AVIF image format
+2:1-4:2	Class selector
+3:3-3:34	PNG image format
+3:3-3:34	background
+3:3-3:34	background-image
+40:3-40:44	BMP image format
+40:3-40:44	TIFF image format
+7:3-7:41	JPG image format

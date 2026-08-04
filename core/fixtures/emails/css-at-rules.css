@@ -1,0 +1,48 @@
+@charset "utf-8";
+@import url("other.css");
+@namespace svg url(http://www.w3.org/2000/svg);
+
+@font-face {
+  font-family: "Brand";
+  src: url("brand.woff2") format("woff2");
+}
+
+@media screen and (max-width: 600px) {
+  .responsive {
+    display: flex;
+    border-radius: 12px;
+  }
+
+  .responsive > .child {
+    float: none;
+  }
+}
+
+@supports (display: grid) {
+  .modern {
+    display: grid;
+    gap: 8px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  @supports (backdrop-filter: blur(2px)) {
+    .nested-deep {
+      backdrop-filter: blur(2px);
+      mix-blend-mode: screen;
+    }
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@page {
+  margin: 1cm;
+}

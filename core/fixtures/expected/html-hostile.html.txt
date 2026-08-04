@@ -1,0 +1,14 @@
+10:13-10:36	mix-blend-mode
+12:11-12:28	border
+12:11-12:28	border-radius
+12:11-12:28	px unit
+18:1-18:53	<textarea> element
+1:1-21:41	<body> element
+2:1-21:41	<div> element
+2:13-2:25	display
+2:13-2:25	display:flex
+3:1-21:41	<p> element
+6:27-6:39	display:grid
+7:1-7:30	<input type="checkbox"> element
+8:1-8:18	<img> element
+8:1-8:18	PNG image format

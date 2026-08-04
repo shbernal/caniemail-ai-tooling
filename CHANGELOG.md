@@ -4,14 +4,25 @@
 
 Initial implementation. Nothing published yet.
 
-- Shared core (`core/caniemail-core.mjs`) resolving caniemail support data with
-  all four verdicts intact: `supported`, `unsupported`, `mitigated`, `untested`.
+- Shared core (`core/`) resolving caniemail support data with all four verdicts
+  intact: `supported`, `unsupported`, `mitigated`, `untested`. Zero runtime
+  dependencies — Node 22+ and nothing else.
 - Skill surface: `SKILL.md` with HTML email authoring rules, plus a CLI
   (`search`, `check`, `lint`, `clients`).
 - MCP surface: `mcp-server-caniemail`, exposing `lint_email`,
   `check_feature_support`, `search_features`, and `list_email_clients`.
-- Live dataset fetch with a 24-hour cache and the npm package's bundled copy as
-  the offline fallback. Every result names which copy answered.
+- Live dataset fetch with a 24-hour cache and a committed snapshot
+  (`core/data/caniemail.json`) as the offline fallback. Every result names which
+  copy answered.
+- Feature detection is ours: one parse per document rather than one per email
+  client, and no `npm install` on either surface. It closes the gap where 22
+  universally-supported features (`<div>`, `<table>`, `px unit`, `PNG`) could
+  not be detected at all, along with every CSS function, everything inside
+  `@media`, and several dead entries in the title tables. Findings inside a
+  `<style>` block now carry correct document line numbers, and a malformed
+  `style` attribute no longer voids the entire lint. The `caniemail` package
+  remains a devDependency, used by `core/differential.test.mjs` as the
+  reference implementation the port is checked against.
 
 Corrects three defects in the upstream `caniemail` package, each with a
 regression test:

@@ -1,0 +1,38 @@
+10:14-10:25	% unit
+10:14-10:25	width property
+10:27-10:46	table-layout
+10:3-10:49	Class selector
+11:16-11:32	max-width
+11:16-11:32	px unit
+14:5-14:23	border
+14:5-14:23	border-radius
+16:5-16:26	display
+18:5-18:26	text-decoration
+1:1-1:15	HTML5 doctype
+20:3-23:4	@media
+21:18-21:40	!important keyword
+25:1-27:12	HTML comments
+29:1-51:7	<body> element
+2:1-52:7	lang attribute
+31:1-49:8	<table> element
+31:1-49:8	align attribute
+31:1-49:8	cellpadding attribute
+31:1-49:8	cellspacing attribute
+31:1-49:8	role attribute
+31:1-49:8	width attribute
+34:7-34:103	<img> element
+34:7-34:103	PNG image format
+34:7-34:103	height attribute
+38:38-38:79	font shorthand
+38:81-38:96	font-size
+38:98-38:114	line-height
+39:7-39:67	<h1> to <h6> elements
+40:7-40:107	<p> element
+46:7-46:62	mailto: links
+6:1-6:47	color-scheme meta tag
+8:1-24:8	<style> element
+9:10-9:19	margin
+9:21-9:31	padding
+9:3-9:61	Type selector
+9:33-9:58	background
+9:33-9:58	background-color

@@ -17,8 +17,9 @@ Gmail strips `<style>` blocks in some contexts, and support for anything modern
 is patchy and undocumented. This skill covers both halves of the problem: write
 markup that survives, then verify it against real data.
 
-`scripts/caniemail.mjs` queries the caniemail.com dataset. Node 22+ and one
-`npm install` in the skill directory; no other setup.
+`scripts/caniemail.mjs` queries the caniemail.com dataset. Node 22+ and nothing
+else — no dependencies, no install step. It works offline against a bundled
+dataset snapshot, and says so when it does.
 
 ```bash
 node scripts/caniemail.mjs <command> [options]

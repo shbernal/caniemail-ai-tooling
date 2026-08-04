@@ -1,0 +1,15 @@
+<body>
+<!-- A plain HTML comment. -->
+<div>
+  <!-- A nested comment. -->
+  <p>text</p>
+</div>
+<!--[if mso]>
+<table><tr><td style="display:flex; border-radius:9px">Outlook only</td></tr></table>
+<![endif]-->
+<!--[if !mso]><!-->
+<div style="mix-blend-mode:multiply">Everyone but Outlook</div>
+<!--<![endif]-->
+<!-- An unterminated comment would swallow the rest of the document, so this
+     one is closed: --><span>after</span>
+</body>

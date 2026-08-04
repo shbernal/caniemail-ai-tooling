@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .flex {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card { border-radius: 12px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12); }
+  .card:hover { transform: translateY(-2px); }
+  .card > .title::after { content: "\2192"; }
+  .card .body p + p { margin-top: 8px; }
+  a[href^="https"] { text-decoration: underline; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #111111; color: #eeeeee; }
+    .card { background: #222222; }
+  }
+  @media screen and (max-width: 480px) {
+    .grid { grid-template-columns: 1fr; }
+    .hide-mobile { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="card">
+    <div class="flex title">Left</div>
+    <div class="body"><p>One</p><p>Two</p></div>
+    <picture>
+      <source srcset="wide.avif" type="image/avif">
+      <img src="wide.png" alt="" style="max-width:100%; height:auto">
+    </picture>
+  </div>
+  <div class="card hide-mobile">
+    <div class="flex title">Right</div>
+  </div>
+</div>
+</body>
+</html>

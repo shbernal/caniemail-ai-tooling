@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style type="text/css">
+  /* This comment starts on document line 6, and the rule below on line 8.
+     Anything reporting either at line 2 or 4 is measuring inside the
+     <style> text instead of measuring the document. */
+  .card {
+    display: flex;
+    border-radius: 12px;
+  }
+
+  @media screen and (max-width: 600px) {
+    /* Declarations that exist only inside an at-rule block. */
+    .card {
+      mix-blend-mode: multiply;
+      backdrop-filter: blur(3px);
+    }
+
+    .card > .inner {
+      float: none;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="card"><span class="inner">card</span></div>
+<style>.late { column-count: 2; }</style>
+</body>
+</html>

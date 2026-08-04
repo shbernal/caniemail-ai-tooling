@@ -1,0 +1,18 @@
+14:1-41:7	<body> element
+14:14-14:22	margin
+14:24-14:33	padding
+14:35-14:53	background
+15:1-40:8	<table> element
+15:1-40:8	cellpadding attribute
+15:1-40:8	cellspacing attribute
+15:1-40:8	width attribute
+17:5-38:9	align attribute
+17:5-38:9	valign attribute
+18:76-18:100	border
+18:76-18:100	px unit
+20:36-20:65	font shorthand
+20:67-20:81	font-size
+21:13-21:65	<p> element
+28:43-28:59	font-weight
+33:75-33:100	text-decoration
+6:1-12:12	HTML comments

@@ -1,0 +1,45 @@
+/* Image formats read out of url() values, including data URIs. */
+.png {
+  background-image: url(hero.png);
+}
+
+.jpg {
+  background: url("photo.jpg") no-repeat;
+}
+
+.gif {
+  background-image: url('spinner.gif');
+}
+
+.webp {
+  background-image: url( modern.webp );
+}
+
+.svg {
+  background-image: url("icon.svg");
+}
+
+.avif {
+  background-image: url("next.avif");
+}
+
+.query-string {
+  /* The extension is behind a query string and a fragment. */
+  background-image: url("banner.jpeg?v=2#frag");
+}
+
+.data-uri {
+  background-image: url("data:image/gif;base64,R0lGODlhAQABAAAAACw=");
+}
+
+.data-uri-svg {
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg"></svg>');
+}
+
+.multiple {
+  background-image: url(a.bmp), url(b.tiff);
+}
+
+.no-extension {
+  background-image: url("https://example.com/render");
+}

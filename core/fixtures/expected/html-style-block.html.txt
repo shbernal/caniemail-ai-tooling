@@ -1,0 +1,19 @@
+10:5-10:18	display
+10:5-10:18	display:flex
+11:5-11:24	border
+11:5-11:24	border-radius
+11:5-11:24	px unit
+14:3-24:4	@media
+17:7-17:31	mix-blend-mode
+18:7-18:33	backdrop-filter
+1:1-1:15	HTML5 doctype
+21:5-23:6	Child combinator
+22:7-22:18	float
+27:1-30:7	<body> element
+28:1-28:55	<div> element
+28:19-28:49	<span> element
+29:16-29:31	column-count
+29:16-29:31	css column properties
+5:1-25:8	<style> element
+6:3-8:56	CSS comments
+9:3-12:4	Class selector

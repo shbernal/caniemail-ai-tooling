@@ -1,0 +1,21 @@
+<body>
+<div style="display:flex">unclosed div
+<p>unclosed paragraph
+<a href="/search?q=a<b">a raw &lt; inside an attribute value</a>
+<a href='He said "hi"'>nested quotes</a>
+<div class=unquoted style=display:grid>unquoted attribute values</div>
+<input disabled type=checkbox>
+<img src="x.png"/>
+<br/>
+<DIV STYLE="MIX-BLEND-MODE:MULTIPLY">uppercase tag and attribute</DIV>
+<div
+   style="border-radius:4px"
+   class="wrapped">attributes across lines</div>
+<script>
+  var notCss = "div { display: flex; }";
+  if (1 < 2) { document.write("<div style='float:left'>"); }
+</script>
+<textarea>&lt;div style="display:flex"&gt;</textarea>
+<title>raw text in title</title>
+<div style="color:red" style="color:blue">duplicate attribute</div>
+<p>trailing content with no closing tags

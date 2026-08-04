@@ -1,0 +1,21 @@
+10:12-10:35	mix-blend-mode
+1:1-11:7	<body> element
+2:1-2:64	<div> element
+2:13-2:25	display
+2:13-2:25	display:flex
+2:27-2:44	border
+2:27-2:44	border-radius
+2:27-2:44	px unit
+3:13-3:25	display:grid
+3:27-3:35	gap, column-gap, row-gap
+4:13-4:43	PNG image format
+4:13-4:43	background
+4:13-4:43	background-image
+5:13-5:52	font shorthand
+5:13-5:52	system-ui, ui-serif, ui-sans-serif, ui-rounded, ui-monospace
+5:54-5:77	% unit
+5:54-5:77	CSS calc() function
+5:54-5:77	width property
+6:13-6:21	margin
+6:23-6:32	padding
+7:41-7:52	float

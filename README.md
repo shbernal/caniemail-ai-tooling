@@ -54,10 +54,11 @@ retested in five years.
 
 ```bash
 npx skills add shbernal/caniemail-ai-tooling
-cd .claude/skills/email-compat && npm install
 ```
 
-Add `-g` for `~/.claude/skills/` instead of the current project.
+Add `-g` for `~/.claude/skills/` instead of the current project. There is no
+install step — the skill has no dependencies, and Node 22+ is the whole
+requirement.
 
 Or point your agent at the CLI directly:
 
@@ -80,15 +81,20 @@ node skill/scripts/caniemail.mjs lint --html draft.html --clients '*'
 }
 ```
 
-Set `CANIEMAIL_OFFLINE=1` to skip the network and use the bundled dataset.
+Its only dependencies are the MCP SDK and `zod`.
+
+Set `CANIEMAIL_OFFLINE=1` to skip the network and use the bundled snapshot.
 
 ## Why this is not a thin wrapper
 
-The obvious build is a thin shim over the [`caniemail`](https://github.com/shellscape/caniemail)
-npm package, which parses HTML/CSS and reports compatibility issues. Its parsing
-and feature detection are good and this project uses them. Its *support
-resolution* is not, in three separate ways, and each one breaks precisely the
-part of the dataset an agent needs most:
+The obvious build is a shim over the [`caniemail`](https://github.com/shellscape/caniemail)
+npm package, which parses HTML/CSS and reports compatibility issues. This
+started as exactly that, and stopped being one for two separate reasons.
+
+### The support resolution is wrong
+
+Three defects, each breaking precisely the part of the dataset an agent needs
+most:
 
 1. **`untested` is reported as partial support.** `getSupportType` returns
    `'partial'` for anything that is not `y` or `n`, merging `a` (works with a
@@ -108,30 +114,61 @@ part of the dataset an agent needs most:
    them as untested. On realistic markup 14 of 48 clients crash, and the
    documented `['*']` glob fails unconditionally.
 
-So this project uses the package as a parser and resolves every verdict itself,
-against the raw dataset, with the four verdicts intact and no re-sorting. The
-core suite has a regression test for each defect.
+So every verdict is resolved here, against the raw dataset, with the four
+verdicts intact and no re-sorting. The core suite has a regression test for each.
 
-One limitation survives that split. The package surfaces a feature only when
-some client does not fully support it, so 22 of 307 features — `<div>`,
-`<table>`, `px unit`, `PNG image format` and similar universals — are never
-detected in the first place, and `lint_email` therefore cannot report them as
-untested on the 6–7 clients that have no data for them. Lookups
-(`check_support`, `client_matrix`) are unaffected; only linting is.
+### The detection was worth owning too
 
-It also fetches live data from caniemail.com rather than relying on the copy
-bundled in the package, which tracks an irregular release cadence — eight months
-between two recent releases — and was 68 days behind the site at time of
-writing. The bundled copy remains the offline fallback, and every result names
-which copy answered.
+For a while this project kept the package purely as a parser, taking `title` and
+`position` from it and discarding every verdict it computed. That worked, and
+cost 28 MB of transitive dependencies, an `npm install` in the skill directory,
+and a 48-pass parse of every document — because the package reports a feature
+only when some probed client fails to fully support it, so detection had to be
+run once per client and unioned.
+
+Feature detection is now ours: one parse, no dependencies, and no email client
+involved in answering "what does this markup use?". It is both faster and
+considerably more complete. Detecting titles directly finds what the old
+approach structurally could not:
+
+| Previously undetectable | Why |
+|---|---|
+| 22 universal features — `<div>`, `<table>`, `px unit`, `PNG` | Every client with data rates them `y`, so no probe ever reported them, and the 6–7 clients with *no* data never got their `untested` verdict |
+| Every CSS function — `calc()`, `min()`, `max()`, `var()`, gradients, `rgb()` | The package's function table is iterated with its key and value transposed, so it matches nothing |
+| Anything inside `@media` or `@supports` | Only a stylesheet's top level was walked, and responsive email lives in media queries |
+| `HTML5 doctype`, `HTML5 semantics`, `Grouping selectors`, `<h2>`–`<h6>`, `<ol>`, `<dl>` | Dead or partial entries in the title tables |
+| `display: none !important` | `!important` was compared as part of the value |
+
+Two further defects were fixes rather than additions. Findings inside a
+`<style>` block were reported at their offset *within the block* rather than in
+the document, so every one carried a wrong line number. And a single malformed
+`style` attribute threw out of `style-to-object` with no `try`/`catch` above it,
+killing all 48 client passes and returning a clean bill of health for the entire
+email.
+
+The package remains a devDependency: it is the only independent implementation
+of what was ported, so the differential suite in `core/differential.test.mjs`
+checks every fixture against it. Across the corpus it finds 267 feature titles
+and we find 125 more, losing only two — both cases where its own detection is
+wrong.
+
+### Data freshness
+
+The dataset is fetched live from caniemail.com rather than read from a bundled
+copy, because the package's copy tracks an irregular release cadence — eight
+months between two recent releases — and was 68 days behind the site at time of
+writing. A snapshot in `core/data/caniemail.json` is the offline fallback, so a
+skill copied onto a machine with no network still answers, and every result
+names which copy answered.
 
 ## Verify
 
 ```bash
-npm install
+npm install         # devDependencies only; the shipped core has none
 make test           # core suite, no network
 make test-network   # adds the live-fetch test
 make smoke          # drives the MCP server over real stdio JSON-RPC
+make check-vendor   # the vendored copies match the core, byte for byte
 ```
 
 ## Scope
@@ -144,6 +181,8 @@ ESPs. Those are different problems and caniemail is not the tool for them.
 
 MIT.
 
-The caniemail dataset is a separate work — MIT, © 2019 Rémi Parmentier — and is
-fetched from caniemail.com at runtime rather than redistributed here. The
-`caniemail` npm package this depends on is MIT, © Andrew Powell.
+The caniemail dataset is a separate work — MIT, © 2019 Rémi Parmentier. It is
+fetched from caniemail.com at runtime, and a snapshot is committed at
+`core/data/caniemail.json` as the offline fallback. The `caniemail` npm package,
+used here only as a development-time reference implementation, is MIT,
+© Andrew Powell.

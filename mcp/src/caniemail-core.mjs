@@ -6,11 +6,15 @@
  * vendored copy, edit this file and run `make sync-core`.
  *
  * Plain ESM with JSDoc types rather than TypeScript, so the vendored copies
- * need no build step on either surface. The one dependency is the `caniemail`
- * npm package, used *only* as an HTML/CSS parser and feature detector. Every
- * support verdict in this file is resolved here, against the raw dataset,
- * because the package's own resolution is wrong in three separate ways. See
- * `resolveSupport` and `detectFeatures` for the specifics.
+ * need no build step on either surface. There are no runtime dependencies at
+ * all: Node 22+ and nothing else. Detection lives in `detect.mjs` and the
+ * scanners beside it; resolution lives here.
+ *
+ * Detection and resolution are kept apart on purpose. "What does this markup
+ * use?" is a question about the markup, and "how well does client X support
+ * it?" a question about the dataset; answering the first in terms of the
+ * second is what made the previous implementation need 48 parses to see one
+ * document, and what made 22 features undetectable however many it ran.
  */
 
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
@@ -18,8 +22,8 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 
-import { caniemail } from 'caniemail';
-import bundledData from 'caniemail/caniemail.json' with { type: 'json' };
+import { detectFeatures } from './detect.mjs';
+import bundledData from './data/caniemail.json' with { type: 'json' };
 
 export const DATA_URL = 'https://www.caniemail.com/api/data.json';
 
@@ -103,14 +107,18 @@ function indexDataset(raw, meta) {
 }
 
 /**
- * Load the caniemail dataset, preferring live data over the copy bundled in the
- * npm package.
+ * Load the caniemail dataset, preferring live data over the bundled snapshot.
  *
- * The bundled copy tracks the package's release cadence, which is irregular and
- * has run eight months between releases; the site's own data moves faster. We
- * fetch live, cache to disk, and fall back to the bundle so the tools never
- * hard-fail offline. `meta.source` and `meta.warning` always say which copy is
- * in play, so a stale answer is visibly stale rather than silently wrong.
+ * The snapshot in `data/caniemail.json` is committed to this repo and refreshed
+ * with `make refresh-data`. It exists so that a skill copied to a machine with
+ * no network still answers, and so the test suite is deterministic — both of
+ * which the `caniemail` package used to provide for free, and neither of which
+ * survived removing it.
+ *
+ * We fetch live, cache to disk, and fall back to the snapshot so the tools
+ * never hard-fail offline. `meta.source` and `meta.warning` always say which
+ * copy is in play, so a stale answer is visibly stale rather than silently
+ * wrong.
  *
  * @param {object} [options]
  * @param {string} [options.cacheDir]
@@ -180,8 +188,8 @@ export async function loadDataset(options = {}) {
     source: 'bundled',
     fetchedAt: null,
     warning: offline
-      ? 'Offline mode: using the copy bundled in the npm package, which lags the site.'
-      : 'Live fetch and cache both unavailable; using the copy bundled in the npm package, which lags the site.',
+      ? 'Offline mode: using the dataset snapshot bundled with this tool, which lags the site.'
+      : 'Live fetch and cache both unavailable; using the dataset snapshot bundled with this tool, which lags the site.',
   });
 }
 
@@ -503,64 +511,6 @@ export function searchFeatures(dataset, query, options = {}) {
 /* -------------------------------------------------------------------------- */
 /* Tool: lint_email                                                            */
 /* -------------------------------------------------------------------------- */
-
-/**
- * Detect which caniemail features appear in the given markup.
- *
- * Two constraints shape this, and together they rule out calling `caniemail()`
- * once with the caller's client list:
- *
- * 1. `caniemail()` only reports features a client does *not* fully support, so
- *    probing a single client silently hides every feature that client happens
- *    to support. Detection has to run broadly and be unioned to be complete.
- * 2. It throws `RangeError: Feature "X" not found on "Y"` whenever a feature
- *    has no stats entry for a client, and 16% of pairs have none. The crash is
- *    per *feature*, not per client — `gmx.android` survives a `<div>` but dies
- *    on `gap` — so no static allowlist of clients can prevent it. On realistic
- *    markup 14 of 48 clients throw, and the documented `['*']` glob always does.
- *
- * So: run each client independently, swallow the ones that throw, and union
- * what survives. No crash can hide a feature: a client throws precisely because
- * it lacks that feature's data, and the clients that have it still report it.
- *
- * Detection is therefore client-independent, which is what lets us resolve
- * verdicts ourselves for all 48 clients, including the ones the package cannot
- * process at all. Cost is ~28ms for a realistic email.
- *
- * One class of feature is invisible regardless, and it is not the crashes. The
- * package records an issue only when a probed client resolves to non-full, so a
- * feature that every client with stats rates `y` is never reported by any
- * client. 22 of 307 are in that state — `<div>`, `<table>`, `px unit`, `PNG
- * image format` and the like — and each also has 6-7 clients with no stats,
- * which we would call `untested`. Those untested findings never surface. See
- * "The detection floor" in AGENTS.md; fixing it means detecting titles
- * ourselves, not changing this loop.
- *
- * @returns {Map<string, {title: string, position: object|undefined}>}
- */
-function detectFeatures(dataset, { html, css }) {
-  const detected = new Map();
-  for (const client of dataset.clients) {
-    let result;
-    try {
-      result = caniemail({ clients: [client], html, css });
-    } catch {
-      continue; // Missing data for this client; other clients still reveal it.
-    }
-    for (const kind of ['errors', 'warnings']) {
-      for (const [, issues] of result.issues[kind]) {
-        for (const issue of issues) {
-          // First sighting wins; positions agree across clients for the same
-          // occurrence, so this keeps the earliest one.
-          if (!detected.has(issue.title)) {
-            detected.set(issue.title, { title: issue.title, position: issue.position });
-          }
-        }
-      }
-    }
-  }
-  return detected;
-}
 
 /**
  * Lint an email's HTML and/or CSS against a set of clients.

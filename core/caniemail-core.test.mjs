@@ -1,15 +1,14 @@
 /**
  * Tests for the shared core.
  *
- * These run offline against the dataset bundled in the npm package, so they are
- * deterministic and safe for CI. Network-dependent behaviour is gated behind
- * CANIEMAIL_TEST_NETWORK=1.
+ * These run offline against the dataset snapshot in `data/caniemail.json`, so
+ * they are deterministic and safe for CI. Network-dependent behaviour is gated
+ * behind CANIEMAIL_TEST_NETWORK=1.
  *
- * Much of this file is regression coverage for defects in the upstream
- * `caniemail` package that this core exists to correct. Those tests are written
- * against *our* behaviour, not the package's, so they keep passing if upstream
- * is fixed — but they fail loudly if a refactor ever starts delegating
- * resolution back to the package.
+ * Much of this file is regression coverage for defects in the `caniemail`
+ * package this core replaced. Those tests are written against *our* behaviour,
+ * not the package's, so they keep passing if upstream is fixed — and they fail
+ * loudly if a refactor ever starts delegating resolution away again.
  */
 
 import test from 'node:test';
@@ -419,6 +418,116 @@ test('every finding carries the data source for auditability', () => {
   const result = lintEmail(dataset, { html: '<div style="display:flex">x</div>', clients: ['*'] });
   assert.ok(result.data_source.source);
   assert.ok(result.data_source.lastUpdate);
+});
+
+/* -------------------------------------------------------------------------- */
+/* Universally-supported features                                              */
+/* -------------------------------------------------------------------------- */
+
+test('a feature every tested client supports still reports its untested clients', () => {
+  // Detection used to run through the package, which reported a feature only
+  // when some probed client failed to fully support it. 22 features are rated
+  // `y` by every client that has data — <div>, <table>, px unit, PNG — so no
+  // probe could ever surface them, and the 6-7 clients with no data at all
+  // never got their `untested` verdict reported. Detection is title-based now,
+  // so they do.
+  const result = lintEmail(dataset, { html: '<div>hi</div>', clients: ['*'] });
+  const div = result.findings.find((f) => f.title === '<div> element');
+  assert.ok(div, 'expected <div> to be detected at all');
+  assert.equal(div.verdict, UNTESTED);
+  assert.equal(div.severity, 'unknown');
+  assert.ok(div.client_count > 0);
+
+  // And it really is untested rather than unsupported: every one of those
+  // clients has no stats entry for the feature.
+  const feature = dataset.byTitle.get('<div> element');
+  for (const client of div.clients_affected) {
+    assert.deepEqual(versionsFor(feature, client), [], `${client} should have no data`);
+  }
+});
+
+test('the rest of the former detection floor is reachable too', () => {
+  const cases = [
+    ['<table role="presentation"><tr><td>x</td></tr></table>', '<table> element'],
+    ['<p>x</p>', '<p> element'],
+    ['<h2>x</h2>', '<h1> to <h6> elements'],
+    ['<td valign="top">x</td>', 'valign attribute'],
+    ['<img src="a.png" alt="">', 'PNG image format'],
+    ['<div style="width:10px">x</div>', 'px unit'],
+    ['<div style="width:50%">x</div>', '% unit'],
+    ['<div style="vertical-align:middle">x</div>', 'vertical-align'],
+  ];
+  for (const [html, title] of cases) {
+    const result = lintEmail(dataset, { html, clients: ['*'] });
+    assert.ok(
+      result.findings.some((f) => f.title === title),
+      `expected ${title} from ${html}`,
+    );
+  }
+});
+
+test('closing the floor does not disturb errors or warnings', () => {
+  // The new findings are all `unknown`, and `includeUntested: false` still
+  // removes every one of them. An agent that only wants real breakage sees
+  // exactly what it saw before.
+  const options = { html: '<div style="display:flex; gap:8px">x</div>', clients: ['*'] };
+  const quiet = lintEmail(dataset, { ...options, includeUntested: false });
+  assert.equal(quiet.summary.unknown, 0);
+  assert.ok(quiet.summary.error > 0);
+  assert.ok(quiet.findings.every((f) => f.verdict !== UNTESTED));
+});
+
+/* -------------------------------------------------------------------------- */
+/* Detection                                                                   */
+/* -------------------------------------------------------------------------- */
+
+test('detection is one parse, not one per client', () => {
+  // The client list cannot change what the markup contains, so the same
+  // findings must come back whichever clients are asked about.
+  const html = '<div style="display:flex; border-radius:8px">x</div>';
+  const one = lintEmail(dataset, { html, clients: ['outlook.windows'] });
+  const all = lintEmail(dataset, { html, clients: ['*'] });
+  const titles = (result) => new Set(result.findings.map((f) => f.title));
+  for (const title of titles(one)) assert.ok(titles(all).has(title));
+});
+
+test('lint finds declarations that appear only inside a media query', () => {
+  // Responsive email lives in `@media`, and the previous parser walked only a
+  // stylesheet's top level, so this was invisible.
+  const result = lintEmail(dataset, {
+    html: '<style>@media (max-width:600px){ .a { border-radius: 9px } }</style>',
+    clients: ['outlook.windows'],
+  });
+  assert.ok(result.findings.some((f) => f.feature === 'css-border-radius'));
+});
+
+test('a style-block finding is positioned in document coordinates', () => {
+  const html = ['<html>', '<head>', '<style>', '.a { display: flex }', '</style>'].join('\n');
+  const result = lintEmail(dataset, { html, clients: ['outlook.windows'] });
+  const flex = result.findings.find((f) => f.feature === 'css-display-flex');
+  assert.equal(flex.position.start.line, 4, 'the rule is on document line 4');
+});
+
+test('a malformed style attribute does not silence the rest of the email', () => {
+  // This threw inside the package, and the throw was not caught, so a single
+  // bad attribute returned a clean bill of health for the whole document.
+  const result = lintEmail(dataset, {
+    html: '<div style="display:flex">a</div><div style="not-a-declaration">b</div>',
+    clients: ['outlook.windows'],
+  });
+  assert.ok(result.findings.some((f) => f.feature === 'css-display-flex'));
+  assert.equal(result.passed, false);
+});
+
+test('markup inside a conditional comment is not reported as the document’s', () => {
+  // `<!--[if mso]>…<![endif]-->` renders in one client. Reporting its contents
+  // against all 48 would be wrong.
+  const result = lintEmail(dataset, {
+    html: '<!--[if mso]><div style="display:flex">x</div><![endif]--><p>hi</p>',
+    clients: ['*'],
+  });
+  assert.ok(!result.findings.some((f) => f.feature === 'css-display-flex'));
+  assert.ok(result.findings.some((f) => f.title === 'HTML comments'));
 });
 
 /* -------------------------------------------------------------------------- */
