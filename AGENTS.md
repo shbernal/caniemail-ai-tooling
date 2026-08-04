@@ -58,7 +58,7 @@ stop being a byte comparison.
 ## Commands
 
 ```bash
-npm install         # root, devDependencies only — the shipped core has none
+pnpm install        # both package trees at once — see "The package manager"
 make test           # core suite, no network
 make test-network   # adds the live-fetch test
 make sync-core      # copy the core into both surfaces — run after any core edit
@@ -72,12 +72,41 @@ Run `make sync-core test check-vendor` before committing any core change.
 
 `make test` and `make check-vendor` also run as a lefthook `pre-commit` hook, so
 a forgotten `make sync-core` fails the commit rather than reaching a surface.
-Install the hooks once per clone with `npm install && npx lefthook install`; the
-same two gates run again in CI. `make sync-core` is deliberately *not* automated
-— vendoring is a decision to record in the commit, not a side effect of it.
+Install the hooks once per clone with `pnpm install && pnpm exec lefthook
+install`; the same two gates run again in CI. `make sync-core` is deliberately
+*not* automated — vendoring is a decision to record in the commit, not a side
+effect of it.
 
-`make smoke` needs `mcp/node_modules`, so run `npm install` in `mcp/` first. It
-tests the transport and tool registrations, which the core suite does not cover.
+`make smoke` needs `mcp/node_modules`, which the root `pnpm install` provides.
+It tests the transport and tool registrations, which the core suite does not
+cover.
+
+## The package manager
+
+pnpm, pinned by `packageManager` in the root `package.json`. Two properties
+matter here and both are load-bearing:
+
+- **One install, two package trees.** `pnpm-workspace.yaml` lists `mcp` as a
+  member, so a single `pnpm install` at the root covers the root
+  devDependencies *and* `mcp/`'s runtime deps. There is no cross-package
+  dependency to model — `mcp/` gets the core by byte-identical file copy, never
+  as a package — so the workspace is install orchestration and nothing more.
+  `skill/` is deliberately not a member: it has no `package.json` and must keep
+  running from a bare checkout with no install step.
+- **No phantom dependencies.** pnpm's isolated `node_modules` means a module can
+  only import what its own `package.json` declares. The rule that the core ships
+  zero runtime dependencies, and that `mcp/` carries nothing beyond the MCP SDK
+  and `zod`, is therefore enforced by resolution rather than by discipline — an
+  accidental import that npm's flat hoisting would have silently satisfied fails
+  outright. Do not add `node-linker=hoisted` or otherwise flatten the store.
+
+pnpm blocks dependency lifecycle scripts by default and **fails the install
+until every one is answered** in `pnpm-workspace.yaml` under `allowBuilds`.
+Only `lefthook` is allowed one, for the postinstall that links its platform
+binary. If a new dependency demands a build script, decide deliberately — do not
+reflexively allow it.
+
+Publishing stays on npm (`npm publish` from `mcp/`); see `docs/releasing.md`.
 
 ## The correctness rule
 

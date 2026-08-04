@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Development now uses pnpm, with `mcp/` as a workspace member so one
+  `pnpm install` covers both package trees. Neither shipped artifact changes:
+  the core still has zero runtime dependencies, `mcp/` still carries only the
+  MCP SDK and `zod`, and `skill/` still runs from a bare checkout with no
+  install step. pnpm's isolated `node_modules` turns the zero-dependency rule
+  into something resolution enforces rather than something to remember.
+  Publishing stays on npm.
+
 ## 0.1.0 — 2026-08-04
 
 First release. The skill ships to ClawHub as `email-compat`, the MCP server to

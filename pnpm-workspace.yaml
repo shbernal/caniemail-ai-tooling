@@ -1,0 +1,16 @@
+# One install covers both package trees. `mcp/` is a workspace member purely so
+# its dependencies land with the root install — it does not depend on anything
+# in this repo. The core reaches it by byte-identical file copy (`make
+# sync-core`), never as a package dependency, and that stays true.
+#
+# `skill/` is deliberately absent: it has no package.json and must keep running
+# from a bare checkout with no install step at all.
+packages:
+  - mcp
+
+# pnpm blocks dependency lifecycle scripts by default and fails the install
+# until every one is answered here. lefthook's postinstall links its platform
+# binary, so denying it would leave `pnpm exec lefthook install` failing with no
+# obvious cause. It is the only dependency in this repo allowed to run one.
+allowBuilds:
+  lefthook: true

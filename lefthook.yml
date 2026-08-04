@@ -1,6 +1,10 @@
 # Local git hooks. Install them once per clone with:
 #
-#     npm install && npx lefthook install
+#     pnpm install && pnpm exec lefthook install
+#
+# (`pnpm install` alone usually suffices — lefthook's postinstall syncs the
+# hooks — but it is allowed to run that script only because pnpm-workspace.yaml
+# lists it under `allowBuilds`, so the explicit command stays documented.)
 #
 # These are deliberately the same gates CI runs. The vendoring rule is the one
 # invariant a commit can quietly break — core/ and its copies under

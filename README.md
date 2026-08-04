@@ -165,7 +165,7 @@ names which copy answered.
 ## Verify
 
 ```bash
-npm install         # devDependencies only; the shipped core has none
+pnpm install        # devDependencies and mcp/'s deps; the shipped core has none
 make test           # core suite, no network
 make test-network   # adds the live-fetch test
 make smoke          # drives the MCP server over real stdio JSON-RPC
@@ -173,8 +173,15 @@ make check-vendor   # the vendored copies match the core, byte for byte
 ```
 
 CI runs all of these except `test-network` on Node 22 and 24. If you are
-contributing, `npx lefthook install` wires `make test` and `make check-vendor`
-into a pre-commit hook so a stale vendored copy cannot be committed.
+contributing, `pnpm exec lefthook install` wires `make test` and
+`make check-vendor` into a pre-commit hook so a stale vendored copy cannot be
+committed.
+
+pnpm is pinned by `packageManager`, and `mcp/` is a workspace member so one
+install covers both trees. It is not an incidental choice: pnpm's isolated
+`node_modules` makes "the core has zero runtime dependencies" enforced by
+resolution rather than by discipline. `skill/` stays outside the workspace and
+needs no install at all.
 
 ## Scope
 

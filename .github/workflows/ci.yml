@@ -20,14 +20,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Must precede setup-node: `cache: pnpm` needs the binary to already
+      # exist. The version comes from `packageManager` in package.json.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
-          cache: npm
+          cache: pnpm
 
-      # devDependencies only — the shipped core has none. The `caniemail`
-      # package is here for the differential suite and nothing else.
-      - run: npm ci
+      # One install covers both package trees — the root's devDependencies and
+      # mcp/'s runtime deps. The shipped core has none of its own; `caniemail`
+      # is here for the differential suite and nothing else.
+      - run: pnpm install --frozen-lockfile
 
       # The vendored copies under skill/scripts and mcp/src must stay
       # byte-identical to core/. This is the gate that catches a core edit
@@ -40,10 +45,7 @@ jobs:
       - name: Run the core suite
         run: make test
 
-      - name: Install MCP dependencies
-        run: npm ci --prefix mcp
-
       # Covers the transport and tool registrations, which the core suite
-      # does not reach.
+      # does not reach. mcp/node_modules came from the workspace install above.
       - name: Drive the MCP server over stdio
         run: make smoke

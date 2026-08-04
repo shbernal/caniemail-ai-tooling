@@ -15,10 +15,10 @@ whole reason the pre-commit hook and CI both run it.
 ## Before either channel
 
 ```bash
-npm install && npx lefthook install   # once per clone
-make sync-core                        # if the core changed at all
-make test check-vendor smoke          # smoke needs `npm install --prefix mcp`
-make test-network                     # confirms the live fetch still works
+pnpm install && pnpm exec lefthook install   # once per clone
+make sync-core                               # if the core changed at all
+make test check-vendor smoke                 # one install already covered mcp/
+make test-network                            # confirms the live fetch still works
 ```
 
 Then decide whether the dataset snapshot should move. It is the offline
@@ -79,6 +79,12 @@ npm publish                 # add --otp=<code> if 2FA is enabled
 The name is unscoped, so it is public by default; no `--access public` needed.
 npm sets the executable bit on the `bin` entry at install time, which is why
 `src/server.mjs` being committed executable matters only to git clones.
+
+Publishing stays on **npm** even though development uses pnpm. Nothing here
+needs pnpm's help: the tarball is just the `files` list, and `mcp/` has no
+`workspace:` dependencies for a publish step to rewrite — it reaches the core by
+file copy. Keeping the publish command the same as the one consumers see
+(`npx -y mcp-server-caniemail`) is worth more than tool consistency.
 
 ## After
 
