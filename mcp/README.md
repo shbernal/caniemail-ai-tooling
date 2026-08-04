@@ -56,11 +56,15 @@ than loading once at startup, so a session left open for days does not keep
 answering from the copy it fetched on the first morning. Startup itself touches
 no network — the handshake never waits on caniemail.com.
 
-`lint_email` is sized for an agent's context: findings carry `positions` as
-`"line:col-line:col"` strings with an `occurrence_count`, `clients_affected` is
-compressed against the clients you asked for (`"*"`, `"outlook.*"`, with
-`client_count` always exact), and the per-severity advice is a `guidance` legend
-on the result rather than a paragraph repeated on every finding.
+`lint_email` is sized for an agent's context. A finding carries only what its
+verdict decides — the severity, the clients affected, the notes — and everything
+that does not vary by verdict is stated once in a `features` legend keyed by
+slug: the title, the URL, the last test date, and `positions`, every place the
+markup uses the feature, as `"line:col-line:col"` strings with an
+`occurrence_count`. `clients_affected` is compressed against the clients you
+asked for (`"*"`, `"outlook.*"`, with `client_count` always exact), and the
+per-severity advice is a second legend, `guidance`, rather than a paragraph
+repeated on every finding.
 
 ## Scope
 

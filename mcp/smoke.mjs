@@ -133,6 +133,24 @@ try {
   );
   check('lint_email survives the "*" glob', payload(lint).clients_checked.length === 48);
 
+  // The legend is what makes a finding readable — its title, url and positions
+  // all live there now — so a serialisation that drops it, or a slug that does
+  // not join, breaks the tool without breaking any finding.
+  const legend = payload(lint).features;
+  const orphans = findings.filter((f) => !legend?.[f.feature]);
+  check(
+    'lint_email findings all resolve against the features legend',
+    orphans.length === 0,
+    orphans.length === 0
+      ? `${Object.keys(legend).length} features, ${findings.length} findings`
+      : `unresolved: ${orphans.map((f) => f.feature).join(', ')}`,
+  );
+  check(
+    'the legend carries the positions findings no longer do',
+    Array.isArray(legend?.['css-display-flex']?.positions) &&
+      legend['css-display-flex'].positions.length > 0,
+  );
+
   const bad = await request('tools/call', {
     name: 'check_feature_support',
     arguments: { feature: 'css-nonsense', clients: ['*'] },

@@ -346,6 +346,15 @@ test('a version pin no requested client carries is still an error', () => {
 /* lint_email                                                                  */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Findings for a feature named by its dataset title.
+ *
+ * Titles live in the `features` legend rather than on the finding, so this
+ * joins the two — and in doing so checks on every use that the join holds.
+ */
+const byTitle = (result, title) =>
+  result.findings.filter((f) => result.features[f.feature]?.title === title);
+
 test('lint reports failures with position, notes and url', () => {
   const result = lintEmail(dataset, {
     html: '<div style="display:flex; border-radius:8px">hi</div>',
@@ -357,12 +366,65 @@ test('lint reports failures with position, notes and url', () => {
   assert.equal(flex.severity, 'error');
   assert.equal(flex.verdict, UNSUPPORTED);
   assert.deepEqual(flex.clients_affected, ['outlook.windows']);
-  assert.ok(flex.url.startsWith('https://'));
-  assert.match(flex.positions[0], /^\d+:\d+-\d+:\d+$/);
-  assert.equal(flex.occurrence_count, 1);
+
+  const legend = result.features[flex.feature];
+  assert.ok(legend, 'every finding’s feature must be in the legend');
+  assert.ok(legend.url.startsWith('https://'));
+  assert.match(legend.positions[0], /^\d+:\d+-\d+:\d+$/);
+  assert.equal(legend.occurrence_count, 1);
 
   const radius = result.findings.find((f) => f.feature === 'css-border-radius');
   assert.ok(radius.notes.some((n) => /VML|RoundRect/i.test(n)), 'expected the VML workaround note');
+});
+
+test('the legend covers exactly the features the findings name', () => {
+  // Two failure modes, opposite directions: a finding whose feature is missing
+  // from the legend loses its title, url and positions outright, and a legend
+  // entry no finding names is payload nobody asked for.
+  const html = '<div style="display:flex; gap:8px; border-radius:9px">x</div>';
+  const result = lintEmail(dataset, { html, clients: ['*'] });
+
+  const named = new Set(result.findings.map((f) => f.feature));
+  assert.ok(named.size > 0);
+  assert.deepEqual(
+    [...named].sort(),
+    Object.keys(result.features).sort(),
+    'the legend and the findings must name the same features',
+  );
+
+  for (const entry of Object.values(result.features)) {
+    assert.ok(entry.title && entry.url && Array.isArray(entry.positions));
+    assert.ok(entry.occurrence_count >= entry.positions.length);
+  }
+});
+
+test('nothing that varies by verdict is hoisted into the legend', () => {
+  // The split is the whole design: one entry per feature can only carry facts
+  // no verdict changes. `css-gap` is unsupported in Outlook and mitigated in
+  // Gmail, so its two findings must still differ from each other.
+  const result = lintEmail(dataset, {
+    html: '<div style="display:flex; gap:16px">x</div>',
+    clients: ['outlook.windows', 'gmail.desktop-webmail'],
+  });
+
+  const gap = result.findings.filter((f) => f.feature === 'css-gap');
+  assert.equal(gap.length, 2, 'expected gap to split across two verdicts');
+  assert.notEqual(gap[0].verdict, gap[1].verdict);
+  assert.notDeepEqual(gap[0].notes, gap[1].notes);
+  // ...while sharing exactly one legend entry between them.
+  assert.equal(Object.keys(result.features).filter((s) => s === 'css-gap').length, 1);
+});
+
+test('a feature whose only findings are suppressed leaves no legend entry', () => {
+  // `includeUntested: false` drops the findings; a legend built ahead of the
+  // filter would have kept describing features the caller never sees.
+  const html = '<div>hi</div>';
+  const withUntested = lintEmail(dataset, { html, clients: ['*'] });
+  assert.ok(Object.hasOwn(withUntested.features, 'html-div'));
+
+  const without = lintEmail(dataset, { html, clients: ['*'], includeUntested: false });
+  assert.deepEqual(without.findings, []);
+  assert.deepEqual(without.features, {}, 'no findings means nothing to describe');
 });
 
 test('per-client notes never contradict the verdict they attach to', () => {
@@ -397,7 +459,7 @@ test('every occurrence of a feature is reported, not just the first', () => {
   ].join('\n');
   const result = lintEmail(dataset, { html, clients: ['outlook.windows'] });
 
-  const radius = result.findings.find((f) => f.feature === 'css-border-radius');
+  const radius = result.features['css-border-radius'];
   assert.equal(radius.occurrence_count, 3);
   assert.equal(radius.positions.length, 3);
   assert.deepEqual(
@@ -417,7 +479,7 @@ test('the position list is capped but the occurrence count is not', () => {
   ).join('\n');
   const result = lintEmail(dataset, { html, clients: ['outlook.windows'] });
 
-  const radius = result.findings.find((f) => f.feature === 'css-border-radius');
+  const radius = result.features['css-border-radius'];
   assert.equal(radius.occurrence_count, 25);
   assert.equal(radius.positions.length, 10);
   assert.match(radius.positions[0], /^1:/, 'the cap drops the latest, never the earliest');
@@ -536,7 +598,7 @@ test('a feature every tested client supports still reports its untested clients'
   // never got their `untested` verdict reported. Detection is title-based now,
   // so they do.
   const result = lintEmail(dataset, { html: '<div>hi</div>', clients: ['*'] });
-  const div = result.findings.find((f) => f.title === '<div> element');
+  const div = byTitle(result, '<div> element')[0];
   assert.ok(div, 'expected <div> to be detected at all');
   assert.equal(div.verdict, UNTESTED);
   assert.equal(div.severity, 'unknown');
@@ -568,10 +630,7 @@ test('the rest of the former detection floor is reachable too', () => {
   ];
   for (const [html, title] of cases) {
     const result = lintEmail(dataset, { html, clients: ['*'] });
-    assert.ok(
-      result.findings.some((f) => f.title === title),
-      `expected ${title} from ${html}`,
-    );
+    assert.ok(byTitle(result, title).length > 0, `expected ${title} from ${html}`);
   }
 });
 
@@ -596,7 +655,7 @@ test('detection is one parse, not one per client', () => {
   const html = '<div style="display:flex; border-radius:8px">x</div>';
   const one = lintEmail(dataset, { html, clients: ['outlook.windows'] });
   const all = lintEmail(dataset, { html, clients: ['*'] });
-  const titles = (result) => new Set(result.findings.map((f) => f.title));
+  const titles = (result) => new Set(Object.values(result.features).map((f) => f.title));
   for (const title of titles(one)) assert.ok(titles(all).has(title));
 });
 
@@ -613,8 +672,11 @@ test('lint finds declarations that appear only inside a media query', () => {
 test('a style-block finding is positioned in document coordinates', () => {
   const html = ['<html>', '<head>', '<style>', '.a { display: flex }', '</style>'].join('\n');
   const result = lintEmail(dataset, { html, clients: ['outlook.windows'] });
-  const flex = result.findings.find((f) => f.feature === 'css-display-flex');
-  assert.match(flex.positions[0], /^4:/, 'the rule is on document line 4');
+  assert.match(
+    result.features['css-display-flex'].positions[0],
+    /^4:/,
+    'the rule is on document line 4',
+  );
 });
 
 test('a malformed style attribute does not silence the rest of the email', () => {
@@ -636,7 +698,7 @@ test('markup inside a conditional comment is not reported as the document’s', 
     clients: ['*'],
   });
   assert.ok(!result.findings.some((f) => f.feature === 'css-display-flex'));
-  assert.ok(result.findings.some((f) => f.title === 'HTML comments'));
+  assert.ok(byTitle(result, 'HTML comments').length > 0);
 });
 
 /* -------------------------------------------------------------------------- */

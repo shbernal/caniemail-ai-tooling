@@ -64,14 +64,23 @@ in five years, and the tool tells you when a verdict is old enough to distrust.
 
 ## Reading a lint finding
 
-- `positions` — every place the feature is used, as `"line:col-line:col"`.
-  `occurrence_count` is the true total; the list stops at ten, so when the two
-  disagree there are more than you can see.
+A finding carries only what its verdict decides: `feature`, `severity`,
+`verdict`, `clients_affected`, `client_count`, `notes` and `feature_notes`.
+One feature usually produces two or three of them, because it can fail
+differently in different clients.
+
+- `features` — a legend on the result keyed by slug. Look the finding's
+  `feature` up there for its `title`, `url`, `positions` and `last_test_date`.
+  These are facts about the feature and where your markup uses it, so they are
+  the same for every finding naming it.
+- `positions` (in the legend) — every place the feature is used, as
+  `"line:col-line:col"`. `occurrence_count` is the true total; the list stops at
+  ten, so when the two disagree there are more than you can see.
 - `clients_affected` — compressed against the clients you asked for. `"*"` means
   all of them, `"outlook.*"` means all the ones you asked for in that family.
   `client_count` is always the exact number, so you never have to expand them.
-- `guidance` — a legend on the result keyed by verdict, not a field on every
-  finding. Look up the finding's `verdict` there.
+- `guidance` — a second legend, keyed by verdict rather than by feature. Look up
+  the finding's `verdict` there.
 
 ## Commands
 

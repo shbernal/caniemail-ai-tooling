@@ -609,6 +609,15 @@ export function searchFeatures(dataset, query, options = {}) {
  * Returns only problems — never the passing features — so the result stays
  * small enough to hand back to an agent mid-draft.
  *
+ * A feature that fails differently in different clients produces one finding
+ * per verdict, so most features emit two or three. What the `features` legend
+ * fixes is that half of each finding did not vary between them: the title, the
+ * URL, the last test date, and — the one worth naming — the source positions,
+ * which are a fact about where the markup uses the feature and have nothing to
+ * do with any client's verdict at all. Repeating them per verdict both cost a
+ * seventh of the payload and invited the reading that two findings for one
+ * feature point at two different places in the document.
+ *
  * @param {Dataset} dataset
  * @param {object} options
  * @param {string} [options.html]
@@ -624,6 +633,7 @@ export function lintEmail(dataset, options) {
   const detected = detectFeatures(dataset, { html, css });
 
   const findings = [];
+  const features = {};
   for (const { title, positions, occurrence_count: occurrences } of detected.values()) {
     const feature = dataset.byTitle.get(title);
     if (!feature) continue; // Detected something the dataset no longer describes.
@@ -651,19 +661,33 @@ export function lintEmail(dataset, options) {
       const affected = bucket.clients;
       if (affected.length === 0) continue;
       if (verdict === UNTESTED && !includeUntested) continue;
+
+      // Written here rather than at the top of the loop so the legend describes
+      // the findings that were actually emitted. A feature whose only problem is
+      // untested, under `includeUntested: false`, produces nothing and belongs
+      // in neither list.
+      features[feature.slug] ??= {
+        title: feature.title,
+        url: feature.url,
+        positions,
+        occurrence_count: occurrences,
+        last_test_date: feature.last_test_date,
+      };
+
       findings.push({
         feature: feature.slug,
-        title: feature.title,
         severity: SEVERITY_BY_VERDICT[verdict],
         verdict,
         clients_affected: summariseClients(affected, clients),
         client_count: affected.length,
         notes: verdict === UNTESTED ? [] : [...bucket.notes],
+        // Stays on the finding, unlike everything else that does not vary by
+        // verdict. Its *content* is feature-level, but it is suppressed for
+        // `untested` — an untested verdict has no findings to report, and a
+        // remark describing partial support elsewhere must not read as one. In
+        // the legend it would be visible from an untested finding again, which
+        // is the thing being prevented.
         feature_notes: verdict === UNTESTED ? null : featureNotes(feature),
-        positions,
-        occurrence_count: occurrences,
-        url: feature.url,
-        last_test_date: feature.last_test_date,
       });
     }
   }
@@ -681,6 +705,11 @@ export function lintEmail(dataset, options) {
   return {
     clients_checked: clients,
     findings,
+    // Everything about a detected feature that no verdict changes, stated once
+    // and keyed by the slug each finding carries. Look a finding's `feature` up
+    // here for its title, its documentation URL, where in the source it was
+    // seen, and how stale the data behind it is.
+    features,
     summary: { ...counts, total: findings.length },
     passed: counts.error === 0,
     // A legend, not per-finding text. These are three constant strings, and a

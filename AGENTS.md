@@ -267,6 +267,17 @@ is the review artifact.
   drop indentation when nothing human is reading (the CLI keeps it at a TTY);
   repeated constants become one legend on the result, and client lists compress
   against the set that was checked. Indentation alone was 28% of a lint.
+
+  `lint_email` carries two legends, and the second one names the rule: a
+  finding holds only what its **verdict** decides, and anything constant across
+  a feature's two or three verdict findings is stated once in `features`, keyed
+  by slug (`guidance` is the same trick keyed by verdict). Worth 10–18% of a
+  lint depending on the email. The test to keep passing is not the size — it is
+  that the legend and the findings name exactly the same features, in both
+  directions. The one deliberate exception is `feature_notes`, whose content is
+  feature-level but which is suppressed for `untested`: in the legend it would
+  be visible from an untested finding again, which is what suppressing it is
+  for.
 - Author metadata is `shbernal`.
 
 ## Scope

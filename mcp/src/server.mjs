@@ -137,13 +137,16 @@ server.registerTool(
       '"error" (unsupported — will not render, use a fallback), ' +
       '"warning" (partial or conditional support — read the notes, usually workable), and ' +
       '"unknown" (never tested on those clients — this is NOT evidence of support; avoid or test). ' +
-      'Passing features are never returned. Each finding carries every source position it was ' +
-      'seen at as "line:col-line:col" (with occurrence_count, which is higher than the list ' +
-      'when a feature appears more than ten times), the clients affected, any documented ' +
-      'workaround, and the feature URL. "clients_affected" is compressed against the clients ' +
-      'you asked for: "*" means all of them and "outlook.*" means all the ones you asked for in ' +
-      'that family, with client_count always the exact number. Per-severity advice is in the ' +
-      'result\'s "guidance" legend rather than repeated on every finding.',
+      'Passing features are never returned. One feature usually yields two or three findings, ' +
+      'one per verdict, and a finding carries only what its verdict decides: severity, verdict, ' +
+      'clients_affected, client_count, notes and feature_notes. Everything else is in the ' +
+      'result\'s "features" legend, keyed by the slug each finding\'s "feature" names — look ' +
+      'there for the title, the feature URL, last_test_date, and "positions", every place your ' +
+      'markup uses it as "line:col-line:col" (with occurrence_count, which is higher than the ' +
+      'list when a feature appears more than ten times). "clients_affected" is compressed ' +
+      'against the clients you asked for: "*" means all of them and "outlook.*" means all the ' +
+      'ones you asked for in that family, with client_count always the exact number. ' +
+      'Per-severity advice is in the "guidance" legend rather than repeated on every finding.',
     inputSchema: {
       html: z.string().optional().describe('The email HTML. Inline styles are checked too.'),
       css: z.string().optional().describe('Standalone CSS, e.g. the contents of a <style> block.'),

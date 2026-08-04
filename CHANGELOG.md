@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+- A lint finding now carries only what its verdict decides, and everything else
+  moves to a `features` legend keyed by slug — the same trick `guidance` already
+  used, one level down. A feature that fails differently in different clients
+  produces two or three findings, and each was repeating the title, the URL, the
+  last test date and the source positions, none of which any verdict changes.
+  On the three template fixtures, linted against all 48 clients: 42,177 → 36,057
+  bytes (−14.5%), 58,285 → 48,061 (−17.5%), and 18,596 → 16,629 (−10.6%).
+
+  `positions` moving is the part worth knowing about, since it costs an
+  indirection to learn where a problem is. It is worth it twice over: it is the
+  largest repeated field, and it was never verdict-dependent to begin with —
+  two findings for one feature always pointed at the same places, and sitting on
+  the finding they invited the reading that they did not.
+
+  The flat, severity-sorted `findings` list is unchanged. Grouping by feature
+  would have collapsed the duplication too, and destroyed the ordering that lets
+  an agent fix the most damaging thing first.
+
+  `feature_notes` deliberately stays on the finding despite being feature-level.
+  It is suppressed for `untested` verdicts, and in the legend it would be
+  reachable from an untested finding again — which is the thing the suppression
+  exists to prevent.
+
 - Three small corrections to the core API.
 
   A client list that is not a list now says so. `{ clients: 'outlook.windows' }`

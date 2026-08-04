@@ -49,8 +49,9 @@ wrong advice:
 | `untested` | No data. **Not** evidence of support, and not evidence against it. |
 
 Around a sixth of the matrix is untested. Every result also carries
-`last_test_date` and a staleness note, because some entries have not been
-retested in five years.
+`last_test_date` — on the finding's entry in the `features` legend, for a lint —
+and `check_feature_support` adds a staleness note, because some entries have not
+been retested in five years.
 
 ## Install the skill
 
