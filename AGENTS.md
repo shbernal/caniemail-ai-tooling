@@ -119,7 +119,10 @@ read a bundled dataset as the primary source.**
   offline fallback, and the deterministic dataset the tests run against. It is
   never the primary. `meta.source` always names which copy answered. Refresh it
   with `make refresh-data`, which will move golden files — that is the signal,
-  not a problem.
+  not a problem. A weekly workflow (`.github/workflows/refresh-data.yml`) runs
+  that refresh and opens a PR when upstream has moved, so the snapshot cannot
+  decay unnoticed in either of its roles; it opens nothing when the refetch is
+  identical.
 - **Resolution.** `resolveSupport` owns every verdict. Detection deals in
   feature *titles* and positions and never asks about a client; resolution deals
   in clients and never parses markup. Keeping those apart is structural now

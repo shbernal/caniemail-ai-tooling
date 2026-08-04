@@ -1,0 +1,154 @@
+name: Refresh dataset snapshot
+
+# `make refresh-data` is a manual command, so `core/data/caniemail.json` decays
+# silently in both of its roles: the offline fallback ships stale data, and the
+# tests keep passing against an increasingly old reality. This is the thing that
+# notices.
+#
+# Deliberately a separate workflow from CI: refreshing is expected to move
+# detection output, and that must never read as a broken commit on main.
+on:
+  schedule:
+    # Mondays, early. Nothing here is time-critical; weekly is often enough to
+    # catch drift and rare enough that a PR still means something.
+    - cron: '23 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    # Scheduled workflows run on forks too, where the push and the PR would both
+    # fail. Nothing to do there.
+    if: github.repository == 'shbernal/caniemail-ai-tooling'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      # `make goldens` runs the differential suite, which needs the `caniemail`
+      # package it checks our port against.
+      - run: pnpm install --frozen-lockfile
+
+      - name: Refetch the snapshot
+        run: |
+          cp core/data/caniemail.json "${RUNNER_TEMP}/before.json"
+          make refresh-data
+
+      # Everything below is skipped when upstream has not moved. A weekly no-op
+      # PR would only teach the reviewer to ignore the ones that matter.
+      - name: Did anything change?
+        id: drift
+        run: |
+          if git diff --quiet -- core/data/caniemail.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Snapshot is already current; nothing to do."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Vendor the refreshed snapshot into both surfaces
+        if: steps.drift.outputs.changed == 'true'
+        run: make sync-core
+
+      # Expected to fail when the refreshed data moves detection output — that
+      # is the signal this workflow exists to surface, not a reason to stop. It
+      # runs before `make goldens` so the failure is visible, and again after so
+      # a reviewer can tell "the goldens moved" from "something else broke".
+      - name: Run the suite against the refreshed data
+        id: suite_before
+        if: steps.drift.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          make test 2>&1 | tail -n 40 | tee "${RUNNER_TEMP}/suite-before.txt"
+
+      - name: Regenerate the golden files
+        if: steps.drift.outputs.changed == 'true'
+        run: make goldens
+
+      - name: Re-run the suite with the goldens regenerated
+        id: suite_after
+        if: steps.drift.outputs.changed == 'true'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          make test 2>&1 | tail -n 40 | tee "${RUNNER_TEMP}/suite-after.txt"
+
+      - name: Write the PR body
+        if: steps.drift.outputs.changed == 'true'
+        run: |
+          body="${RUNNER_TEMP}/body.md"
+          {
+            echo "Refetched from \`https://www.caniemail.com/api/data.json\`."
+            echo
+            node .github/scripts/dataset-delta.mjs \
+              "${RUNNER_TEMP}/before.json" core/data/caniemail.json
+            echo
+            echo "## Golden files"
+            echo
+            if git diff --quiet -- core/fixtures/expected; then
+              echo "Unchanged — detection output is identical on every fixture."
+            else
+              echo "Moved. \`make goldens\` regenerated them; read the diff — it is"
+              echo "the review artifact for what the new data does to detection."
+              echo
+              echo '```'
+              git diff --stat -- core/fixtures/expected
+              echo '```'
+            fi
+            echo
+            echo "## Test suite"
+            echo
+            echo "- before \`make goldens\`: **${{ steps.suite_before.outcome }}**"
+            echo "- after \`make goldens\`: **${{ steps.suite_after.outcome }}**"
+            echo
+            if [ "${{ steps.suite_after.outcome }}" != "success" ]; then
+              echo "The suite still fails with the goldens regenerated, so this is"
+              echo "more than a detection-output move. Last 40 lines:"
+              echo
+              echo '```'
+              cat "${RUNNER_TEMP}/suite-after.txt"
+              echo '```'
+              echo
+            fi
+            echo "CI does not run on this PR: a pull request opened with"
+            echo "\`GITHUB_TOKEN\` does not trigger workflows. Close and reopen it to"
+            echo "get a real run, or read the results above."
+          } > "$body"
+          cat "$body" >> "$GITHUB_STEP_SUMMARY"
+
+      # A fixed branch, force-pushed. An unreviewed refresh from last week is
+      # superseded rather than left to accumulate beside this one.
+      - name: Open or update the pull request
+        if: steps.drift.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: dataset-refresh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$BRANCH"
+          git add core/data skill/scripts/data mcp/src/data core/fixtures/expected
+          git commit -m 'Refresh the caniemail dataset snapshot'
+          git push --force origin "$BRANCH"
+
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            gh pr comment "$BRANCH" --body-file "${RUNNER_TEMP}/body.md"
+            echo "Updated the open refresh PR."
+          else
+            gh pr create \
+              --title 'Refresh the caniemail dataset snapshot' \
+              --body-file "${RUNNER_TEMP}/body.md" \
+              --base main \
+              --head "$BRANCH"
+          fi

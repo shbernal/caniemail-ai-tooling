@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- The dataset snapshot can no longer decay unnoticed. A weekly workflow
+  refetches it, and opens a pull request only when upstream has actually moved —
+  a no-op PR every Monday would just teach the reviewer to ignore the ones that
+  matter. The body is the review artifact: `last_update_date` before and after,
+  the feature count, added and removed slugs, and every support cell that
+  flipped, because most refreshes change verdicts rather than the feature list.
+  The suite runs before and after `make goldens` so a detection-output move
+  reads differently from a real break. Refreshing has always been able to move
+  golden files; that was fine while it was a deliberate command and a silent
+  liability once it stopped being run — the snapshot is both the offline
+  fallback and the fixture every test runs against.
+
 - Dependency updates are automated. Dependabot watches npm weekly from the
   workspace root — which is the only correct entry for a pnpm workspace, since
   Dependabot resolves every member from the directory holding the lockfile and
