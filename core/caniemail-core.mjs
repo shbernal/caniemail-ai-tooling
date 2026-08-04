@@ -122,6 +122,7 @@ function indexDataset(raw, meta) {
  *
  * @param {object} [options]
  * @param {string} [options.cacheDir]
+ * @param {string} [options.dataUrl]   Fetch from somewhere other than caniemail.com.
  * @param {number} [options.maxAgeMs]  Refetch if the cache is older than this.
  * @param {boolean} [options.offline]  Skip the network entirely.
  * @param {number} [options.timeoutMs]
@@ -130,6 +131,13 @@ function indexDataset(raw, meta) {
 export async function loadDataset(options = {}) {
   const {
     cacheDir = defaultCacheDir(),
+    // Points at a mirror or a proxy for anyone who cannot reach caniemail.com
+    // directly, and it is the seam `dataset-cache.test.mjs` drives: everything
+    // below — the cache freshness boundary, the corrupt-cache fallthrough, the
+    // fetch-failure ladder down to the bundle, the abort timeout — is what
+    // `meta.source` and `meta.warning` are computed from, and a loopback server
+    // exercises the real `fetch` rather than a stub standing in for it.
+    dataUrl = DATA_URL,
     maxAgeMs = 24 * 60 * 60 * 1000,
     offline = false,
     timeoutMs = 10_000,
@@ -154,7 +162,7 @@ export async function loadDataset(options = {}) {
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch(DATA_URL, { signal: controller.signal });
+      const response = await fetch(dataUrl, { signal: controller.signal });
       clearTimeout(timer);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const raw = await response.json();

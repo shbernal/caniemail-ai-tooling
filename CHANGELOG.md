@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- The dataset cache is covered by tests. It was the least-tested code in the
+  repo and it is what implements the promise that a stale answer is visibly
+  stale: `meta.source` and `meta.warning` are computed nowhere else, every path
+  that produces them is a failure path, and none of them ran in CI. Twelve cases
+  now drive `loadDataset` against a loopback HTTP server — the freshness
+  boundary, a cache truncated by a concurrent write, an error status whose body
+  parses, a server that accepts the connection and says nothing, a cache
+  directory that cannot be written — and each was checked by breaking the
+  behaviour it guards and confirming it failed. Coverage of the core went from
+  91.6% to 99.7% of lines.
+
+  `loadDataset` takes a `dataUrl` option, which is what makes that possible.
+  It is a real option rather than a test hook: it points at a mirror or a proxy
+  for anyone who cannot reach caniemail.com directly.
+
 - The dataset snapshot can no longer decay unnoticed. A weekly workflow
   refetches it, and opens a pull request only when upstream has actually moved —
   a no-op PR every Monday would just teach the reviewer to ignore the ones that

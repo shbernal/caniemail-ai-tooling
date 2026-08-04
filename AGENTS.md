@@ -242,7 +242,17 @@ is the review artifact.
   nine published files.
 - Tests use `node:test`, run offline against `core/data/caniemail.json`, and
   stay deterministic. Network tests are gated behind `CANIEMAIL_TEST_NETWORK=1`
-  and excluded from the default target.
+  and excluded from the default target. "Offline" means **no external
+  dependency**, not no sockets: the rule exists so a caniemail.com outage cannot
+  read as a broken commit, and `core/dataset-cache.test.mjs` runs a loopback
+  `node:http` server on `127.0.0.1` without breaking it. That is deliberate.
+  `loadDataset`'s fetch-and-cache ladder is where `meta.source` and
+  `meta.warning` come from, every path through it is a failure path, and a
+  stubbed `fetch` would have replaced the code under test with the test's own
+  idea of it — the loopback server keeps the real `fetch`, the real
+  `AbortController` timeout, real status handling and real JSON parsing, and
+  stages a 500, a garbage body or a hang in one line each. The `dataUrl` option
+  that makes it possible is a real option (a mirror, a proxy), not a test hook.
 - One dataset snapshot is committed, at `core/data/caniemail.json`, and vendored
   with the core. It is the offline fallback and the test fixture, never the
   primary source. (This replaces an earlier "no dataset is committed" rule,
