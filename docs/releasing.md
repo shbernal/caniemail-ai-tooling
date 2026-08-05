@@ -88,7 +88,11 @@ JSON directly rather than concluding the upload failed.
   effect. The job upgrades npm before publishing because OIDC needs `>= 11.5.1`,
   which is newer than any Node line currently bundles.
 - **ClawHub** has no OIDC path, so it authenticates with a long-lived
-  `CLAWHUB_TOKEN` repository secret.
+  `CLAWHUB_TOKEN`. It is an *environment* secret on `release`, which is why the
+  skill job declares `environment: release` and the npm job does not — a job
+  outside the environment reads that secret as an empty string, and a job inside
+  it carries an `environment` claim that npm's trusted publisher, configured
+  without one, has no reason to accept.
 
 [tp]: https://docs.npmjs.com/trusted-publishers
 

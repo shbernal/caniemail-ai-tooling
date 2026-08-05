@@ -91,6 +91,12 @@ jobs:
     needs: verify
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
+    # CLAWHUB_TOKEN is an environment secret, so without this it resolves to an
+    # empty string and `auth login` fails at release time. publish-mcp is
+    # deliberately not in the environment: it holds no secret, and npm's trusted
+    # publisher for this package is configured without one, which a job running
+    # in `release` would contradict in its OIDC claims.
+    environment: release
     permissions:
       contents: read
     env:
