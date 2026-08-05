@@ -11,9 +11,9 @@ usable by an agent.
 
 | Your client | Use | Why |
 |---|---|---|
-| **Anything whose agent runs commands on your machine** — Claude Code, Codex CLI, OpenClaw, Cursor, Zed | the **skill** | It carries the authoring rules as well as the tools, so the agent writes compatible markup in the first place instead of only checking it afterwards. |
-| **Claude Desktop** | the **MCP server over stdio** | A Desktop chat has no local shell, but Desktop does spawn MCP servers on your machine. |
-| **claude.ai on the web, or anything running in the cloud** | the **MCP server over HTTP**, hosted by you | A cloud session cannot reach a process on your machine. |
+| **An agent that runs commands on your machine** — Claude Code, Codex CLI, OpenClaw, Cursor, Zed | the **skill** | It carries the authoring rules as well as the tools, so the agent writes compatible markup in the first place instead of only checking it afterwards. |
+| **A desktop chat app that spawns MCP servers** — Claude Desktop and the like | the **MCP server over stdio** | A desktop chat has no local shell, but it does start MCP servers on your machine. |
+| **A hosted session** — a chat in the browser, or an agent running in the cloud | the **MCP server over HTTP**, hosted by you | A cloud session cannot reach a process on your machine. |
 
 There is no public instance of this server, and nobody is running one for you.
 
@@ -60,9 +60,9 @@ clawhub install email-compat          # from ClawHub
 npx skills add shbernal/caniemail-ai-tooling   # or straight from this repo
 ```
 
-`skills` takes `-g` for `~/.claude/skills/` instead of the current project.
-Either way there is no install step afterwards — the skill has no dependencies,
-and Node 22+ is the whole requirement.
+`skills` puts it in `.agents/skills/` in the current project, or takes `-g` for
+`~/.agents/skills/` instead. Either way there is no install step afterwards —
+the skill has no dependencies, and Node 22+ is the whole requirement.
 
 Or point your agent at the CLI directly:
 

@@ -4,7 +4,7 @@ Guidance for AI agents working in this repo.
 
 ## What this is
 
-Two surfaces (a Claude skill and an MCP server) over one shared core
+Two surfaces (an agent skill and an MCP server) over one shared core
 (`core/caniemail-core.mjs`) giving an agent access to email client HTML/CSS
 compatibility data. See `README.md` for the full pitch and usage.
 
