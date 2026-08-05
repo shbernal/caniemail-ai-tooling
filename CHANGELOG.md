@@ -1,6 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-08-05
+
+`lint_email` returns a different shape. A finding now carries only what its
+verdict decides and the rest sits in two legends on the result, positions are
+strings, and `version_requested` has moved off the entries of
+`check_feature_support`'s `support` array. Anything reading those fields off a
+finding has to follow the legend instead; the details are below. Nothing was
+removed from what a result tells you, and the payload is roughly half what it
+was.
 
 - A lint finding now carries only what its verdict decides, and everything else
   moves to a `features` legend keyed by slug — the same trick `guidance` already

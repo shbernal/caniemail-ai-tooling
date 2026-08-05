@@ -18,16 +18,47 @@ The shipped core has **zero runtime dependencies**. Node 22+ and nothing else.
 That is a property to preserve, not an accident: it is what lets `skill/` run
 from a bare checkout with no `package.json` and no install step.
 
-## Pre-release
+## Released
 
-This project has no release yet. Treat it as free to change:
+`v0.1.0` was tagged and released on 2026-08-04, and both surfaces are live:
+`mcp-server-caniemail` on npm and `email-compat` on ClawHub.
+`docs/releasing.md` has the process for each; there is no automated publish, and
+that is deliberate — the release ritual is where the vendoring guarantee gets a
+human check.
 
-- Do not preserve backwards compatibility unless Santiago explicitly asks.
-- Do not defer to the prior architecture when it conflicts with the current goal.
-- Existing code, docs, and plans are context, not constraints.
+Both registries treat a version as permanent. Never delete or re-publish a
+released version; fix forward with a version bump on whichever surfaces are
+affected. The two artifacts are independent and their version numbers are not
+required to move together — couple them only when a change actually reaches
+both.
 
-Once there is a release, compatibility becomes a real constraint and this
-section gets replaced with the rules in `rfc-ai-tooling/AGENTS.md`.
+### Breaking changes are welcome
+
+Released constrains what a *published version* means, not what the next one may
+do. When the better behaviour is incompatible with the old one, ship the better
+behaviour: remove the old one and bump the version.
+
+- **No deprecation period, no compatibility shims, and no runtime warning that
+  a behaviour has changed.** A migration is read once; code carrying a record
+  of its own history is paid for on every read after that.
+- **Put the notice in `CHANGELOG.md`**, under the version that made the change,
+  naming what moved and how to get the old outcome where one exists.
+- An error message may name the option that restores prior behaviour when that
+  option is a genuine feature (`include_untested`), never as a notice that
+  something used to work differently.
+
+What a fix has to ship on:
+
+- **`core/`** — a bump on whichever surfaces are affected, which for a core
+  change is normally both, since both vendor it.
+- **`skill/SKILL.md`** — needs a ClawHub bump. The skill artifact embeds it, so
+  a description or trigger fix does not reach users without a release.
+- **`mcp/README.md`** — it is the npm project page, so a fix only shows up on a
+  new release.
+- **Root `README.md`** and **`docs/`** — ship in neither artifact. Commit them;
+  publish nothing.
+- **`CHANGELOG.md`** — ships in neither artifact either, but every version bump
+  gets an entry there before the tag is cut, and the date goes in at that point.
 
 ## The vendoring rule
 

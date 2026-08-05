@@ -36,6 +36,12 @@ Finally, bump the version in `package.json` and `mcp/package.json`, move the
 commit. The version the MCP server reports over the wire is read from
 `mcp/package.json`, so there is no third place to remember.
 
+The commands below take the version from there rather than repeating it:
+
+```bash
+VERSION=$(node -p "require('./mcp/package.json').version")
+```
+
 ## The skill, to ClawHub
 
 The path must be **absolute** — ClawHub rejects a relative one with the
@@ -45,7 +51,7 @@ count and a fingerprint without publishing anything.
 ```bash
 clawhub publish "$PWD/skill" \
   --slug email-compat --name "Email Compatibility" \
-  --version 0.1.0 --dry-run
+  --version "$VERSION" --dry-run
 ```
 
 `fileCount` should be **9**: `SKILL.md`, the CLI, the six vendored core modules,
@@ -56,7 +62,7 @@ back to the commit it was built from:
 
 ```bash
 clawhub publish "$PWD/skill" \
-  --slug email-compat --name "Email Compatibility" --version 0.1.0 \
+  --slug email-compat --name "Email Compatibility" --version "$VERSION" \
   --source-repo shbernal/caniemail-ai-tooling \
   --source-commit "$(git rev-parse HEAD)" \
   --source-ref main --source-path skill
@@ -95,8 +101,8 @@ file copy. Keeping the publish command the same as the one consumers see
 ## After
 
 ```bash
-git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0
-gh release create v0.1.0 --notes-from-tag
+git tag -a "v$VERSION" -m "v$VERSION" && git push origin "v$VERSION"
+gh release create "v$VERSION" --notes-from-tag
 ```
 
 Then confirm the published artifacts actually run, rather than assuming the
