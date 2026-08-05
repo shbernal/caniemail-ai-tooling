@@ -1,0 +1,174 @@
+name: publish
+
+# Two surfaces on two registries, so two triggers:
+#
+#   push a v* tag  -> npm      (mcp-server-caniemail)
+#   publish a release -> ClawHub  (email-compat)
+#
+# The split is deliberate. The npm package is the tag's content and nothing
+# else, while the skill listing carries a changelog that points at the release
+# page — which does not exist yet at tag-push time. `gh release create v0.2.0`
+# after the tag push therefore runs the second half.
+on:
+  push:
+    tags: ["v*"]
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  # The gate that makes a release trustworthy: both surfaces vendor the core by
+  # file copy, so a release is only correct if check-vendor passed on the exact
+  # commit being released. CI runs it on main; this runs it on the tag.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  publish-mcp:
+    needs: verify
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      # Trusted publishing (OIDC). No npm token lives in this repo, and npm
+      # attaches provenance to the tarball as a side effect.
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          registry-url: https://registry.npmjs.org
+
+      # OIDC publishing needs npm >= 11.5.1, which is newer than what any Node
+      # release line bundles today. Pinning Node alone is not enough.
+      - name: Upgrade npm to a version that can publish over OIDC
+        run: npm install -g npm@latest
+
+      # The tag is the only thing a human types at release time, and nothing
+      # else ties it to what gets uploaded: tagging v0.2.0 without bumping the
+      # manifest would publish 0.1.0 under a v0.2.0 release. The root manifest
+      # ships nothing but is checked too, since a half-done bump is a mistake
+      # worth catching here rather than at the next release.
+      - name: Tag matches both manifests
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          packaged=$(node -p "require('./mcp/package.json').version")
+          root=$(node -p "require('./package.json').version")
+          if [ "$tag" != "$packaged" ]; then
+            echo "::error::tag $GITHUB_REF_NAME implies $tag, but mcp/package.json declares $packaged"
+            exit 1
+          fi
+          if [ "$tag" != "$root" ]; then
+            echo "::error::tag $GITHUB_REF_NAME implies $tag, but package.json declares $root"
+            exit 1
+          fi
+          echo "tag $GITHUB_REF_NAME matches both manifests at $packaged"
+
+      # `npm publish` refuses an existing version with a 403, so a re-run of a
+      # release — or a tag pushed after publishing by hand — would fail the
+      # workflow rather than skip. The conflict is read off the failure instead
+      # of pre-checked with `npm view`, because the registry's read path lags
+      # its write path by a minute or so: right after a publish, `npm view`
+      # still reports the previous version, and a guard built on it would
+      # conclude "not published yet" and then hit the very error it was meant
+      # to avoid.
+      - name: Publish to npm
+        working-directory: mcp
+        run: |
+          if out=$(npm publish 2>&1); then
+            echo "$out"
+          elif grep -qiE 'previously published|EPUBLISHCONFLICT' <<<"$out"; then
+            echo "$out"
+            echo "::notice::this version is already on npm; skipping"
+          else
+            echo "$out"
+            exit 1
+          fi
+
+  publish-skill:
+    needs: verify
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      SKILL_SLUG: email-compat
+      # `inspect` needs a fully-qualified skill; `publish` resolves the owner
+      # from the token, which is why the handle appears here and not below.
+      SKILL_REF: "@shbernal/email-compat"
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Need tag history to diff skill/ against the previous release.
+          fetch-depth: 0
+
+      # The two artifacts are independent and their versions are not required
+      # to move together. A release that only touched mcp/ or the core's server
+      # adapter should not mint a skill version whose files are identical to
+      # the last one.
+      - name: Check whether the skill changed since the last release
+        id: diff
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          prev_tag=$(git tag --sort=-creatordate | grep -vFx "$RELEASE_TAG" | head -1)
+          if [ -z "$prev_tag" ] || ! git diff --quiet "$prev_tag" HEAD -- skill/; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::skill/ is unchanged since $prev_tag; skipping ClawHub"
+          fi
+
+      - uses: actions/setup-node@v7
+        if: steps.diff.outputs.changed == 'true'
+        with:
+          node-version: "24"
+
+      # Pinned; ClawHub has no OIDC trusted-publishing path, so auth is a
+      # long-lived token (CLAWHUB_TOKEN) rather than id-token: write.
+      - name: Install clawhub
+        if: steps.diff.outputs.changed == 'true'
+        run: npm install -g clawhub@0.23.1
+
+      - name: Authenticate to ClawHub
+        if: steps.diff.outputs.changed == 'true'
+        run: clawhub auth login --token "${{ secrets.CLAWHUB_TOKEN }}" --no-browser
+
+      # ClawHub refuses to re-publish an existing version and exits non-zero, so
+      # without this the whole workflow fails whenever the version is already up
+      # — a re-run of a release, or a skill published by hand before the tag.
+      # `inspect` exits 0 when the version exists and 1 when it does not.
+      - name: Check whether this version is already published
+        id: existing
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          if clawhub inspect "$SKILL_REF" --version "$version" >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$SKILL_REF@$version is already published; skipping"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The slug is passed explicitly because ClawHub otherwise defaults it to
+      # the folder name, which would publish this as "skill". --changelog is
+      # passed for the same reason: left out, the listing invents its own
+      # summary, and 0.2.0 shipped describing a change from the release before.
+      - name: Publish skill to ClawHub
+        if: steps.diff.outputs.changed == 'true' && steps.existing.outputs.published == 'false'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          clawhub skill publish skill \
+            --slug "$SKILL_SLUG" \
+            --version "${RELEASE_TAG#v}" \
+            --name "Email Compatibility" \
+            --source-repo "${{ github.repository }}" \
+            --source-commit "${{ github.sha }}" \
+            --source-ref "$RELEASE_TAG" \
+            --source-path skill \
+            --changelog "${{ github.event.release.html_url }}"

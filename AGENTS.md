@@ -22,9 +22,12 @@ from a bare checkout with no `package.json` and no install step.
 
 `v0.1.0` was tagged and released on 2026-08-04, and both surfaces are live:
 `mcp-server-caniemail` on npm and `email-compat` on ClawHub.
-`docs/releasing.md` has the process for each; there is no automated publish, and
-that is deliberate — the release ritual is where the vendoring guarantee gets a
-human check.
+`docs/releasing.md` has the process for each. Publishing is automated:
+`.github/workflows/publish.yml` uploads to npm on a `v*` tag push and to
+ClawHub on a published release, and it re-runs the full suite on the released
+ref first — a tag does not match CI's `branches: [main]` filter, so without that
+job the released commit would reach both registries with nothing verified on it.
+Both halves are idempotent, so a partly-failed release can be re-run.
 
 Both registries treat a version as permanent. Never delete or re-publish a
 released version; fix forward with a version bump on whichever surfaces are

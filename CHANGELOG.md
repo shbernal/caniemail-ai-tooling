@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+- Releases publish themselves. `.github/workflows/publish.yml` uploads the npm
+  package on a `v*` tag push and the skill on a published release, and runs the
+  whole suite on the released ref before either — a tag does not match CI's
+  `branches: [main]` filter, so until now nothing verified the exact commit that
+  reached the registries. It also refuses a tag that disagrees with either
+  manifest, which is the failure no amount of care reliably catches: `v0.2.0`
+  tagged over an unbumped `mcp/package.json` publishes 0.1.0 under a 0.2.0
+  release.
+
+  npm authenticates by OIDC trusted publishing, so no token lives in this repo
+  and the tarball carries build provenance. ClawHub has no such path and uses a
+  `CLAWHUB_TOKEN` secret. Both halves skip an already-published version rather
+  than failing, and the skill is skipped entirely when `skill/` has not changed
+  since the previous tag.
+
 ## 0.2.0 — 2026-08-05
 
 `lint_email` returns a different shape. A finding now carries only what its

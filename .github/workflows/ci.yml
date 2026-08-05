@@ -5,6 +5,10 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # publish.yml calls this before it uploads anything. A tag push does not
+  # match `branches: [main]`, so without this the released ref would reach both
+  # registries with nothing verified on it.
+  workflow_call:
 
 # The network test is deliberately absent: it hits www.caniemail.com, so a
 # caniemail.com outage must not read as a broken commit. Everything here runs
