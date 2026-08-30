@@ -138,11 +138,6 @@ const ELEMENT_ATTRIBUTE_TITLE_EXCEPTIONS = {
   'AMP for Email': { element: 'html', matchers: [['⚡4email', null], ['amp4email', null]] },
 };
 
-/** HTML titles naming several attributes at once. */
-const ATTRIBUTE_TITLE_EXCEPTIONS = {
-  'srcset and sizes attributes': ['srcset', 'sizes'],
-};
-
 /** File extension -> image feature title. */
 const IMAGE_EXTENSION_TITLES = {
   apng: 'Animated PNG image format',
@@ -306,12 +301,19 @@ function createTables(features) {
       return names.length > 0 ? [{ title, names }] : [];
     }),
 
-    // "role attribute" -> "role".
+    // "role attribute" -> "role"; "srcset and sizes attributes" -> both.
+    //
+    // Every derived name has to look like an attribute. A title such as
+    // "Deprecated presentational attributes" is prose, not a list, and the
+    // guard drops it rather than deriving a name nothing can ever match --
+    // which would leave the title counted as reachable and take the coverage
+    // tripwire in core/feature-titles.test.mjs down with it.
     attributes: html.flatMap((title) => {
-      const exception = ATTRIBUTE_TITLE_EXCEPTIONS[title];
-      if (exception) return [{ title, names: exception }];
-      if (!title.endsWith(' attribute')) return [];
-      return [{ title, names: [title.replace(/ attribute$/, '')] }];
+      const match = /^(.+?) attributes?$/.exec(title);
+      if (!match) return [];
+      const names = match[1].split(/,\s*|\s+and\s+/).map((name) => name.trim());
+      if (names.length === 0 || !names.every((name) => /^[a-z][a-z0-9-]*$/.test(name))) return [];
+      return [{ title, names }];
     }),
 
     // '<input type="text"> element' -> element "input", attribute type="text".

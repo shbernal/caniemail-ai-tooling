@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- Titles naming several attributes are derived by convention rather than listed.
+  `srcset and sizes attributes` was the only one upstream had written, so it sat
+  in a hardcoded table; upstream then added `command and commandfor attributes`
+  and it was undetectable until someone noticed. Both now come from the same
+  rule, as does whatever the next one is called.
+
+  A derived name has to look like an attribute for the title to count. Without
+  that, a prose title along the lines of "Deprecated presentational attributes"
+  would yield a name no markup can match while still counting as covered, which
+  would quietly disable the tripwire in `core/feature-titles.test.mjs` that
+  caught this in the first place.
+
 - Releases publish themselves. `.github/workflows/publish.yml` uploads the npm
   package on a `v*` tag push and the skill on a published release, and runs the
   whole suite on the released ref before either — a tag does not match CI's

@@ -174,6 +174,34 @@ test('attributes match by name', () => {
   assert.deepEqual(matchAttributes(tables, ['nonsense']), []);
 });
 
+test('a title naming several attributes yields each of them', () => {
+  // Built from a synthetic dataset rather than the snapshot: this is the
+  // convention that has to hold for a title upstream has not written yet.
+  const attributes = (title) =>
+    buildTitleTables([{ title, category: 'html' }]).attributes;
+
+  assert.deepEqual(attributes('command and commandfor attributes'), [
+    { title: 'command and commandfor attributes', names: ['command', 'commandfor'] },
+  ]);
+  assert.deepEqual(attributes('ping, rel and target attributes'), [
+    { title: 'ping, rel and target attributes', names: ['ping', 'rel', 'target'] },
+  ]);
+  assert.deepEqual(attributes('hidden attribute'), [
+    { title: 'hidden attribute', names: ['hidden'] },
+  ]);
+});
+
+test('a title that only reads like an attribute list yields nothing', () => {
+  // "Deprecated presentational attributes" is prose. Deriving the name
+  // "deprecated presentational" from it would match no markup ever while
+  // still counting as reachable, which is the one way this file can go stale
+  // without the coverage test below noticing.
+  const tables = buildTitleTables([
+    { title: 'Deprecated presentational attributes', category: 'html' },
+  ]);
+  assert.deepEqual(tables.attributes, []);
+});
+
 test('element/attribute pairs need both halves', () => {
   const pair = (tag, attributes) => matchElementAttributes(tables, tag, new Map(attributes));
   assert.deepEqual(pair('input', [['type', 'checkbox']]), ['<input type="checkbox"> element']);
