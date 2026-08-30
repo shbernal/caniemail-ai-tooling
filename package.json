@@ -17,13 +17,13 @@
   "engines": {
     "node": ">=22.0.0"
   },
-  "packageManager": "pnpm@11.18.0",
+  "packageManager": "pnpm@11.24.0",
   "scripts": {
     "test": "node --test 'core/*.test.mjs'",
     "test:network": "CANIEMAIL_TEST_NETWORK=1 node --test 'core/*.test.mjs'"
   },
   "devDependencies": {
     "caniemail": "^2.0.2",
-    "lefthook": "^2.1.10"
+    "lefthook": "^2.1.12"
   }
 }
