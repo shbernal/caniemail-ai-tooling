@@ -9,7 +9,7 @@ Two surfaces (an agent skill and an MCP server) over one shared core
 compatibility data. See `README.md` for the full pitch and usage.
 
 ```
-core/     the implementation and its tests — the only real source
+core/     the implementation and its tests, the only real source
 skill/    SKILL.md, a CLI, and a vendored copy of the core
 mcp/      the mcp-server-caniemail npm package, a thin adapter over the core
 ```
@@ -22,18 +22,17 @@ from a bare checkout with no `package.json` and no install step.
 
 `v0.1.0` was tagged and released on 2026-08-04, and both surfaces are live:
 `mcp-server-caniemail` on npm and `email-compat` on ClawHub.
-`docs/releasing.md` has the process for each. Publishing is automated:
+`docs/releasing.md` has the process for each. Publishing is automated.
 `.github/workflows/publish.yml` uploads to npm on a `v*` tag push and to
 ClawHub on a published release, and it re-runs the full suite on the released
-ref first — a tag does not match CI's `branches: [main]` filter, so without that
+ref first. A tag does not match CI's `branches: [main]` filter, so without that
 job the released commit would reach both registries with nothing verified on it.
 Both halves are idempotent, so a partly-failed release can be re-run.
 
 Both registries treat a version as permanent. Never delete or re-publish a
 released version; fix forward with a version bump on whichever surfaces are
 affected. The two artifacts are independent and their version numbers are not
-required to move together — couple them only when a change actually reaches
-both.
+required to move together. Couple them only when a change reaches both.
 
 ### Breaking changes are welcome
 
@@ -52,15 +51,15 @@ behaviour: remove the old one and bump the version.
 
 What a fix has to ship on:
 
-- **`core/`** — a bump on whichever surfaces are affected, which for a core
-  change is normally both, since both vendor it.
-- **`skill/SKILL.md`** — needs a ClawHub bump. The skill artifact embeds it, so
-  a description or trigger fix does not reach users without a release.
-- **`mcp/README.md`** — it is the npm project page, so a fix only shows up on a
-  new release.
-- **Root `README.md`** and **`docs/`** — ship in neither artifact. Commit them;
+- **`core/`** needs a bump on whichever surfaces are affected, which for a
+  core change is normally both, since both vendor it.
+- **`skill/SKILL.md`** needs a ClawHub bump. The skill artifact embeds it, so a
+  description or trigger fix does not reach users without a release.
+- **Root `README.md`** and **`docs/`** ship in neither artifact. Commit them;
   publish nothing.
-- **`CHANGELOG.md`** — ships in neither artifact either, but every version bump
+- **`mcp/README.md`** is the npm project page, so a fix only shows up on a new
+  release.
+- **`CHANGELOG.md`** ships in neither artifact either, but every version bump
   gets an entry there before the tag is cut, and the date goes in at that point.
 
 ## The vendoring rule
@@ -81,21 +80,21 @@ data/caniemail.json  the offline dataset snapshot
 
 - **Never edit a vendored copy directly.** Edit the core, then `make sync-core`.
 - `make check-vendor` fails the build on drift, dataset snapshot included.
-- Files not in `CORE_FILES` — the tests and `upstream-detect.mjs` — are
+- Files not in `CORE_FILES`, the tests and `upstream-detect.mjs`, are
   development-only and must never reach a surface.
 
-The core is plain ESM with JSDoc types rather than TypeScript, specifically so
-the vendored copies need no build step on either surface. Keep it that way — a
-compile step would have to run in both places and the vendoring guarantee would
-stop being a byte comparison.
+The core is plain ESM with JSDoc types rather than TypeScript, so the vendored
+copies need no build step on either surface. Keep it that way. A compile step
+would have to run in both places and the vendoring guarantee would stop being a
+byte comparison.
 
 ## Commands
 
 ```bash
-pnpm install        # both package trees at once — see "The package manager"
+pnpm install        # both package trees at once, see "The package manager"
 make test           # core suite, no network
 make test-network   # adds the live-fetch test
-make sync-core      # copy the core into both surfaces — run after any core edit
+make sync-core      # copy the core into both surfaces, after any core edit
 make check-vendor   # verify the vendored copies match
 make goldens        # regenerate fixtures/expected after an intended change
 make refresh-data   # refetch the dataset snapshot
@@ -108,7 +107,7 @@ Run `make sync-core test check-vendor` before committing any core change.
 a forgotten `make sync-core` fails the commit rather than reaching a surface.
 Install the hooks once per clone with `pnpm install && pnpm exec lefthook
 install`; the same two gates run again in CI. `make sync-core` is deliberately
-*not* automated — vendoring is a decision to record in the commit, not a side
+*not* automated. Vendoring is a decision to record in the commit, not a side
 effect of it.
 
 `make smoke` needs `mcp/node_modules`, which the root `pnpm install` provides.
@@ -123,22 +122,22 @@ matter here and both are load-bearing:
 - **One install, two package trees.** `pnpm-workspace.yaml` lists `mcp` as a
   member, so a single `pnpm install` at the root covers the root
   devDependencies *and* `mcp/`'s runtime deps. There is no cross-package
-  dependency to model — `mcp/` gets the core by byte-identical file copy, never
-  as a package — so the workspace is install orchestration and nothing more.
+  dependency to model. `mcp/` gets the core by byte-identical file copy, never
+  as a package, so the workspace is install orchestration and nothing more.
   `skill/` is deliberately not a member: it has no `package.json` and must keep
   running from a bare checkout with no install step.
 - **No phantom dependencies.** pnpm's isolated `node_modules` means a module can
   only import what its own `package.json` declares. The rule that the core ships
   zero runtime dependencies, and that `mcp/` carries nothing beyond the MCP SDK
-  and `zod`, is therefore enforced by resolution rather than by discipline — an
+  and `zod`, is therefore enforced by resolution rather than by discipline. An
   accidental import that npm's flat hoisting would have silently satisfied fails
   outright. Do not add `node-linker=hoisted` or otherwise flatten the store.
 
 pnpm blocks dependency lifecycle scripts by default and **fails the install
 until every one is answered** in `pnpm-workspace.yaml` under `allowBuilds`.
 Only `lefthook` is allowed one, for the postinstall that links its platform
-binary. If a new dependency demands a build script, decide deliberately — do not
-reflexively allow it.
+binary. If a new dependency demands a build script, decide deliberately rather
+than by reflex.
 
 Publishing stays on npm (`npm publish` from `mcp/`); see `docs/releasing.md`.
 
@@ -152,7 +151,7 @@ read a bundled dataset as the primary source.**
   `core/data/caniemail.json` is a committed snapshot serving two jobs: the
   offline fallback, and the deterministic dataset the tests run against. It is
   never the primary. `meta.source` always names which copy answered. Refresh it
-  with `make refresh-data`, which will move golden files — that is the signal,
+  with `make refresh-data`, which will move golden files. That is the signal,
   not a problem. A weekly workflow (`.github/workflows/refresh-data.yml`) runs
   that refresh and opens a PR when upstream has moved, so the snapshot cannot
   decay unnoticed in either of its roles; it opens nothing when the refetch is
@@ -171,7 +170,7 @@ what `resolveSupport` may do, so it stays documented:
 1. `getSupportType` merges `u` (untested) into `'partial'` alongside `a`
    (mitigated). 900 of its 1,637 partial verdicts are actually untested.
 2. It sorts version keys lexicographically, but the upstream JSON is already in
-   chronological order. **Never sort version keys — take the last one as
+   chronological order. **Never sort version keys. Take the last one as
    authored.** `outlook.macos` is `["2011", "2016", "16.80"]`; every sort picks
    the wrong one. 280 cells are affected.
 
@@ -179,7 +178,7 @@ what `resolveSupport` may do, so it stays documented:
    integer-like keys to the front in ascending numeric order, so `"2011"` and
    `"2016"` are ordered by value, not by how they were written. 611 cells have
    two or more such keys and all are already ascending, which makes the hoisting
-   a no-op — and it stays one as long as upstream authors year-style keys
+   a no-op, and it stays one as long as upstream authors year-style keys
    chronologically. If that ever breaks, the fix is to read key order from the
    raw JSON text, not to reintroduce a sort.
 3. It throws `RangeError` when a (feature, client) pair has no stats entry, and
@@ -194,31 +193,31 @@ tests fail, the change is wrong, not the test.
 The related invariant: the four verdicts (`supported`, `unsupported`,
 `mitigated`, `untested`) must survive into every output. Do not collapse them
 into a boolean or a three-state severity anywhere, and do not let `untested`
-carry notes — it has no findings to report.
+carry notes, since it has no findings to report.
 
 ## Detection
 
 `detect.mjs` turns markup into feature titles in **one parse**, with no email
 client involved. The load-bearing idea is that "what does this markup use?" is a
-question about the markup alone. Do not reintroduce a client into detection —
-that coupling is what previously forced 48 parses per document and made 22
-features permanently invisible.
+question about the markup alone. Do not reintroduce a client into detection.
+That coupling is what forced 48 parses per document and made 22 features
+permanently invisible.
 
 The pieces:
 
 - `html-scan.mjs` is a **flat tokenizer, not a DOM.** Detection examines each
-  element in isolation — tag name, attributes, `style`, image URLs — and never
-  asks about ancestors, siblings or descendants. There is no tree to build.
+  element in isolation, meaning its tag name, attributes, `style` and image
+  URLs, and never asks about ancestors, siblings or descendants. There is no tree to build.
   Do not add one.
 - `css-scan.mjs` **descends into at-rule blocks.** Responsive email lives inside
   `@media`; a scanner that walks only the top level cannot see it.
 - Everything is **offsets**, converted to line/column once at the end in
   `detect.mjs`. CSS inside a `<style>` block is put into document coordinates by
-  adding the block's start offset. Do not reintroduce line/column arithmetic —
-  it is what produced wrong line numbers for every `<style>` finding before.
+  adding the block's start offset. Do not reintroduce line/column arithmetic.
+  It is what produced wrong line numbers for every `<style>` finding before.
 - `detectFeatures` returns `positions` (rendered `"line:col-line:col"` by
   `formatPosition`, which the goldens also use) and an `occurrence_count`, per
-  title. **The count is uncapped and the list is not** — it stops at ten, so a
+  title. **The count is uncapped and the list is not.** It stops at ten, so a
   generated email cannot inflate the payload, and a disagreement between the two
   is how a caller knows there are more. The first position is always the
   earliest, which is what lets `differential.test.mjs` keep comparing against
@@ -234,8 +233,8 @@ The pieces:
   without a release here. The cost is that a novel title *shape* goes unnoticed;
   the coverage test in `core/feature-titles.test.mjs` is the tripwire, asserting
   that exactly four of the 307 features are unreachable (`BIMI`, `Base 64 image
-  format`, `HDR image format`, `Video as Image Assets` — none expressible in
-  markup). If that count moves, a convention has gone stale.
+  format`, `HDR image format`, `Video as Image Assets`, none of them
+  expressible in markup). If that count moves, a convention has gone stale.
 
 Cost is ~1ms for a realistic email, against ~59ms for the loop it replaced.
 
@@ -243,7 +242,7 @@ Cost is ~1ms for a realistic email, against ~59ms for the loop it replaced.
 
 `core/differential.test.mjs` checks every fixture in `core/fixtures/emails/`
 against the `caniemail` package, which stays a **devDependency** for exactly
-this purpose — it is the only independent implementation of what was ported.
+this purpose. It is the only independent implementation of what was ported.
 `core/upstream-detect.mjs` is the only file allowed to import it.
 
 The suite asserts we find everything upstream finds, that positions agree or
@@ -262,7 +261,7 @@ is the review artifact.
 
 ## Conventions
 
-- Node 22+. The core has **no runtime dependencies**. Do not add one — the
+- Node 22+. The core has **no runtime dependencies**. Do not add one. The
   no-install property of `skill/` depends on it, and `mcp/` should carry nothing
   beyond the MCP SDK and `zod`. pnpm's isolated `node_modules` enforces this for
   `mcp/`; `skill/` has no `node_modules` to be isolated from, so a test in
@@ -271,7 +270,7 @@ is the review artifact.
 - **Both surfaces are executed by tests, not just the core.** `mcp/smoke.mjs`
   (`make smoke`) drives the MCP server over real stdio; `core/skill-cli.test.mjs`
   spawns the skill CLI. Each has its own argument handling that the core suite
-  cannot reach. `core/skill-cli.test.mjs` lives in `core/` deliberately — it is
+  cannot reach. `core/skill-cli.test.mjs` lives in `core/` deliberately. It is
   not in `CORE_FILES`, so it is never vendored, and `skill/` stays at exactly the
   nine published files.
 - Tests use `node:test`, run offline against `core/data/caniemail.json`, and
@@ -283,7 +282,7 @@ is the review artifact.
   `loadDataset`'s fetch-and-cache ladder is where `meta.source` and
   `meta.warning` come from, every path through it is a failure path, and a
   stubbed `fetch` would have replaced the code under test with the test's own
-  idea of it — the loopback server keeps the real `fetch`, the real
+  idea of it. The loopback server keeps the real `fetch`, the real
   `AbortController` timeout, real status handling and real JSON parsing, and
   stages a 500, a garbage body or a hang in one line each. The `dataUrl` option
   that makes it possible is a real option (a mirror, a proxy), not a test hook.
@@ -302,14 +301,14 @@ is the review artifact.
   repeated constants become one legend on the result, and client lists compress
   against the set that was checked. Indentation alone was 28% of a lint.
 
-  `lint_email` carries two legends, and the second one names the rule: a
+  `lint_email` carries two legends, and the second one names the rule. A
   finding holds only what its **verdict** decides, and anything constant across
   a feature's two or three verdict findings is stated once in `features`, keyed
-  by slug (`guidance` is the same trick keyed by verdict). Worth 10–18% of a
-  lint depending on the email. The test to keep passing is not the size — it is
+  by slug (`guidance` is the same trick keyed by verdict). Worth 10 to 18% of a
+  lint depending on the email. The test to keep passing is not the size. It is
   that the legend and the findings name exactly the same features, in both
   directions. The one deliberate exception is `feature_notes`, whose content is
-  feature-level but which is suppressed for `untested`: in the legend it would
+  feature-level but which is suppressed for `untested`. In the legend it would
   be visible from an untested finding again, which is what suppressing it is
   for.
 - Author metadata is `shbernal`.
@@ -317,5 +316,5 @@ is the review artifact.
 ## Scope
 
 Rendering only. Deliverability, SPF/DKIM/DMARC/BIMI, list management, and ESP
-selection are explicitly out of scope — if asked to add them, say so rather than
+selection are explicitly out of scope. If asked to add them, say so rather than
 stretching caniemail data to cover questions it cannot answer.
