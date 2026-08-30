@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.2.1 — 2026-08-30
+
+- The dataset snapshot both surfaces ship as their offline fallback moves from
+  2026-07-20 to 2026-08-10: one feature added (`html-command-attribute`), no
+  removals, and thirteen verdict cells changed across `css-inset` and
+  `html-popover`. Detection output is identical on every fixture.
 
 - Titles naming several attributes are derived by convention rather than listed.
   `srcset and sizes attributes` was the only one upstream had written, so it sat
