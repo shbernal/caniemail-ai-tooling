@@ -129,6 +129,12 @@ jobs:
 
       # A fixed branch, force-pushed. An unreviewed refresh from last week is
       # superseded rather than left to accumulate beside this one.
+      #
+      # `gh pr create` here needs "Allow GitHub Actions to create and approve
+      # pull requests" enabled on the repository. Nothing in this file says so,
+      # and with it off the failure is a quiet one: the branch pushes fine and
+      # only the PR fails, so a refresh lands on `dataset-refresh` with nobody
+      # told it is there. That is how the 2026-08-17 and 2026-08-24 runs went.
       - name: Open or update the pull request
         if: steps.drift.outputs.changed == 'true'
         env:
