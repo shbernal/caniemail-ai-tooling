@@ -1,7 +1,7 @@
 # caniemail-ai-tooling
 
 Two ways to give an AI agent working access to email client compatibility data:
-a **skill** and an **MCP server**. They share one core and behave identically.
+a skill and an MCP server. They share one core and behave identically.
 
 Email clients are not browsers. Outlook on Windows renders with Microsoft Word,
 support for anything modern is patchy, and the difference between "works with a
@@ -11,27 +11,27 @@ usable by an agent.
 
 | Your client | Use | Why |
 |---|---|---|
-| **An agent that runs commands on your machine** — Claude Code, Codex CLI, OpenClaw, Cursor, Zed | the **skill** | It carries the authoring rules as well as the tools, so the agent writes compatible markup in the first place instead of only checking it afterwards. |
-| **A desktop chat app that spawns MCP servers** — Claude Desktop and the like | the **MCP server over stdio** | A desktop chat has no local shell, but it does start MCP servers on your machine. |
-| **A hosted session** — a chat in the browser, or an agent running in the cloud | the **MCP server over HTTP**, hosted by you | A cloud session cannot reach a process on your machine. |
+| An agent that runs commands on your machine, such as Claude Code, Codex CLI, OpenClaw, Cursor, Zed | the skill | It carries the authoring rules as well as the tools, so the agent writes compatible markup in the first place instead of only checking it afterwards. |
+| A desktop chat app that spawns MCP servers, such as Claude Desktop | the MCP server over stdio | A desktop chat has no local shell, but it does start MCP servers on your machine. |
+| A hosted session, a chat in the browser or an agent running in the cloud | the MCP server over HTTP, hosted by you | A cloud session cannot reach a process on your machine. |
 
 There is no public instance of this server, and nobody is running one for you.
 
 ## What it does
 
 Three tools, deliberately not one. A single "give me the caniemail data" tool
-would return 620KB of JSON — 307 features across 48 clients — and exhaust an
+would return 620KB of JSON, 307 features across 48 clients, and exhaust an
 agent's context before it did anything useful.
 
-- **`lint_email`** — the workhorse. Give it your drafted HTML/CSS and a client
+- `lint_email` is the workhorse. Give it your drafted HTML/CSS and a client
   list; it returns only what breaks, with every source position the feature was
   used at, affected clients, documented workarounds, and a link to each feature.
   Call it before sending. A realistic newsletter against all 48 clients costs
   about 10k tokens.
-- **`check_feature_support`** — for deciding *how* to build something. One
-  feature, per-client verdicts, roughly 200 tokens instead of the whole file.
-- **`search_features`** — find slugs by keyword. Agents don't know that flexbox
-  is `css-display-flex` or that "rounded corners" is `css-border-radius`.
+- `check_feature_support` is for deciding *how* to build something. One feature,
+  per-client verdicts, roughly 200 tokens instead of the whole file.
+- `search_features` finds slugs by keyword. Agents don't know that flexbox is
+  `css-display-flex` or that "rounded corners" is `css-border-radius`.
 
 Plus `list_email_clients`, though the roster is inlined into the other tools'
 descriptions so it's rarely needed.
@@ -45,13 +45,13 @@ wrong advice:
 |---|---|
 | `supported` | Use it. |
 | `unsupported` | Will not render. Use a fallback. |
-| `mitigated` | Works with a documented workaround — the note is the actual answer. |
+| `mitigated` | Works with a documented workaround. The note is the actual answer. |
 | `untested` | No data. **Not** evidence of support, and not evidence against it. |
 
-Around a sixth of the matrix is untested. Every result also carries
-`last_test_date` — on the finding's entry in the `features` legend, for a lint —
-and `check_feature_support` adds a staleness note, because some entries have not
-been retested in five years.
+Around a sixth of the matrix is untested. Every result carries
+`last_test_date`, which for a lint sits on the finding's entry in the `features`
+legend, and `check_feature_support` adds a staleness note, because some entries
+have not been retested in five years.
 
 ## Install the skill
 
@@ -61,8 +61,8 @@ npx skills add shbernal/caniemail-ai-tooling   # or straight from this repo
 ```
 
 `skills` puts it in `.agents/skills/` in the current project, or takes `-g` for
-`~/.agents/skills/` instead. Either way there is no install step afterwards —
-the skill has no dependencies, and Node 22+ is the whole requirement.
+`~/.agents/skills/` instead. Either way there is no install step afterwards.
+The skill has no dependencies, and Node 22+ is the whole requirement.
 
 Or point your agent at the CLI directly:
 
@@ -97,19 +97,18 @@ started as exactly that, and stopped being one for two separate reasons.
 
 ### The support resolution is wrong
 
-Three defects, each breaking precisely the part of the dataset an agent needs
-most:
+Three defects, each breaking the part of the dataset an agent needs most:
 
 1. **`untested` is reported as partial support.** `getSupportType` returns
    `'partial'` for anything that is not `y` or `n`, merging `a` (works with a
    workaround) into `u` (never tested). 900 of its 1,637 `partial` verdicts are
-   actually untested — 55%, across 76 features — and they surface as warnings
+   actually untested, 55% of them, across 76 features. They surface as warnings
    with no note, which reads as "minor, proceed".
 
 2. **Version selection sorts keys that were already in order.** The upstream
    JSON preserves the chronological order the site displays; the package
    re-sorts it lexicographically and takes the last. `outlook.macos` carries
-   `["2011", "2016", "16.80"]`, where the newest entry sorts smallest — both
+   `["2011", "2016", "16.80"]`, where the newest entry sorts smallest, both
    lexicographically and numerically. 280 cells resolve to the wrong version,
    flipping verdicts in both directions.
 
@@ -118,7 +117,7 @@ most:
    them as untested. On realistic markup 14 of 48 clients crash, and the
    documented `['*']` glob fails unconditionally.
 
-So every verdict is resolved here, against the raw dataset, with the four
+Every verdict is resolved here instead, against the raw dataset, with the four
 verdicts intact and no re-sorting. The core suite has a regression test for each.
 
 ### The detection was worth owning too
@@ -126,21 +125,20 @@ verdicts intact and no re-sorting. The core suite has a regression test for each
 For a while this project kept the package purely as a parser, taking `title` and
 `position` from it and discarding every verdict it computed. That worked, and
 cost 28 MB of transitive dependencies, an `npm install` in the skill directory,
-and a 48-pass parse of every document — because the package reports a feature
-only when some probed client fails to fully support it, so detection had to be
-run once per client and unioned.
+and a 48-pass parse of every document. The package reports a feature only when
+some probed client fails to fully support it, so detection had to run once per
+client and be unioned.
 
-Feature detection is now ours: one parse, no dependencies, and no email client
-involved in answering "what does this markup use?". It is both faster and
-considerably more complete. Detecting titles directly finds what the old
-approach structurally could not:
+Feature detection is now ours. One parse, no dependencies, and no email client
+involved in answering "what does this markup use?". Detecting titles directly
+finds what the old approach structurally could not:
 
 | Previously undetectable | Why |
 |---|---|
-| 22 universal features — `<div>`, `<table>`, `px unit`, `PNG` | Every client with data rates them `y`, so no probe ever reported them, and the 6–7 clients with *no* data never got their `untested` verdict |
-| Every CSS function — `calc()`, `min()`, `max()`, `var()`, gradients, `rgb()` | The package's function table is iterated with its key and value transposed, so it matches nothing |
+| 22 universal features, among them `<div>`, `<table>`, `px unit`, `PNG` | Every client with data rates them `y`, so no probe ever reported them, and the six or seven clients with *no* data never got their `untested` verdict |
+| Every CSS function, `calc()`, `min()`, `max()`, `var()`, gradients, `rgb()` | The package's function table is iterated with its key and value transposed, so it matches nothing |
 | Anything inside `@media` or `@supports` | Only a stylesheet's top level was walked, and responsive email lives in media queries |
-| `HTML5 doctype`, `HTML5 semantics`, `Grouping selectors`, `<h2>`–`<h6>`, `<ol>`, `<dl>` | Dead or partial entries in the title tables |
+| `HTML5 doctype`, `HTML5 semantics`, `Grouping selectors`, `<h2>` through `<h6>`, `<ol>`, `<dl>` | Dead or partial entries in the title tables |
 | `display: none !important` | `!important` was compared as part of the value |
 
 Two further defects were fixes rather than additions. Findings inside a
@@ -150,38 +148,39 @@ the document, so every one carried a wrong line number. And a single malformed
 killing all 48 client passes and returning a clean bill of health for the entire
 email.
 
-The package remains a devDependency: it is the only independent implementation
-of what was ported, so the differential suite in `core/differential.test.mjs`
-checks every fixture against it. Across the corpus it finds 267 feature titles
-and we find 125 more, losing only two — both cases where its own detection is
-wrong.
+The package remains a devDependency, because it is the only independent
+implementation of what was ported. The differential suite in
+`core/differential.test.mjs` checks every fixture against it. Across the corpus
+it finds 267 feature titles and we find 125 more, losing only two, both cases
+where its own detection is wrong.
 
 ### Data freshness
 
 The dataset is fetched live from caniemail.com rather than read from a bundled
-copy, because the package's copy tracks an irregular release cadence — eight
-months between two recent releases — and was 68 days behind the site at time of
+copy, because the package's copy tracks an irregular release cadence, eight
+months between two recent releases, and was 68 days behind the site at time of
 writing. A snapshot in `core/data/caniemail.json` is the offline fallback, so a
 skill copied onto a machine with no network still answers, and every result
 names which copy answered.
 
 ## Contributing
 
-`CONTRIBUTING.md` has the setup, the test targets, and the one rule that trips
-people up: `core/` is the only implementation, and everything under
-`skill/scripts/` and `mcp/src/` is a byte-identical copy of it.
+`CONTRIBUTING.md` has the setup and the test targets. The rule worth knowing
+before a first patch is that `core/` is the only implementation, and everything
+under `skill/scripts/` and `mcp/src/` is a byte-identical copy of it.
 
 ## Scope
 
-Rendering only — whether markup displays correctly in a given client. Nothing
-about deliverability, SPF/DKIM/DMARC/BIMI, list management, or choosing between
-ESPs. Those are different problems and caniemail is not the tool for them.
+Rendering only, meaning whether markup displays correctly in a given client.
+Nothing about deliverability, SPF/DKIM/DMARC/BIMI, list management, or choosing
+between ESPs. Those are different problems and caniemail is not the tool for
+them.
 
 ## License
 
 MIT.
 
-The caniemail dataset is a separate work — MIT, © 2019 Rémi Parmentier. It is
+The caniemail dataset is a separate work, MIT, © 2019 Rémi Parmentier. It is
 fetched from caniemail.com at runtime, and a snapshot is committed at
 `core/data/caniemail.json` as the offline fallback. The `caniemail` npm package,
 used here only as a development-time reference implementation, is MIT,
