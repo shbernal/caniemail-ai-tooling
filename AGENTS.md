@@ -207,8 +207,8 @@ The pieces:
 
 - `html-scan.mjs` is a **flat tokenizer, not a DOM.** Detection examines each
   element in isolation, meaning its tag name, attributes, `style` and image
-  URLs, and never asks about ancestors, siblings or descendants. There is no tree to build.
-  Do not add one.
+  URLs, and never asks about ancestors, siblings or descendants. There is no
+  tree to build. Do not add one.
 - `css-scan.mjs` **descends into at-rule blocks.** Responsive email lives inside
   `@media`; a scanner that walks only the top level cannot see it.
 - Everything is **offsets**, converted to line/column once at the end in

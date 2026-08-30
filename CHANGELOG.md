@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.2.1 — 2026-08-30
+## 0.2.1 - 2026-08-30
 
 - The dataset snapshot both surfaces ship as their offline fallback moves from
   2026-07-20 to 2026-08-10: one feature added (`html-command-attribute`), no
@@ -21,12 +21,11 @@
 
 - Releases publish themselves. `.github/workflows/publish.yml` uploads the npm
   package on a `v*` tag push and the skill on a published release, and runs the
-  whole suite on the released ref before either — a tag does not match CI's
+  whole suite on the released ref before either. A tag does not match CI's
   `branches: [main]` filter, so until now nothing verified the exact commit that
   reached the registries. It also refuses a tag that disagrees with either
-  manifest, which is the failure no amount of care reliably catches: `v0.2.0`
-  tagged over an unbumped `mcp/package.json` publishes 0.1.0 under a 0.2.0
-  release.
+  manifest, which is the failure no amount of care catches. `v0.2.0` tagged over
+  an unbumped `mcp/package.json` publishes 0.1.0 under a 0.2.0 release.
 
   npm authenticates by OIDC trusted publishing, so no token lives in this repo
   and the tarball carries build provenance. ClawHub has no such path and uses a
@@ -34,7 +33,7 @@
   than failing, and the skill is skipped entirely when `skill/` has not changed
   since the previous tag.
 
-## 0.2.0 — 2026-08-05
+## 0.2.0 - 2026-08-05
 
 `lint_email` returns a different shape. A finding now carries only what its
 verdict decides and the rest sits in two legends on the result, positions are
@@ -45,7 +44,7 @@ removed from what a result tells you, and the payload is roughly half what it
 was.
 
 - A lint finding now carries only what its verdict decides, and everything else
-  moves to a `features` legend keyed by slug — the same trick `guidance` already
+  moves to a `features` legend keyed by slug, the same trick `guidance` already
   used, one level down. A feature that fails differently in different clients
   produces two or three findings, and each was repeating the title, the URL, the
   last test date and the source positions, none of which any verdict changes.
@@ -53,9 +52,9 @@ was.
   bytes (−14.5%), 58,285 → 48,061 (−17.5%), and 18,596 → 16,629 (−10.6%).
 
   `positions` moving is the part worth knowing about, since it costs an
-  indirection to learn where a problem is. It is worth it twice over: it is the
-  largest repeated field, and it was never verdict-dependent to begin with —
-  two findings for one feature always pointed at the same places, and sitting on
+  indirection to learn where a problem is. It is worth it twice over. It is the
+  largest repeated field, and it was never verdict-dependent to begin with.
+  Two findings for one feature always pointed at the same places, and sitting on
   the finding they invited the reading that they did not.
 
   The flat, severity-sorted `findings` list is unchanged. Grouping by feature
@@ -64,7 +63,7 @@ was.
 
   `feature_notes` deliberately stays on the finding despite being feature-level.
   It is suppressed for `untested` verdicts, and in the legend it would be
-  reachable from an untested finding again — which is the thing the suppression
+  reachable from an untested finding again, which is the thing the suppression
   exists to prevent.
 
 - Three small corrections to the core API.
@@ -76,7 +75,7 @@ was.
   A `limit` that cannot return anything is an error rather than an empty result,
   matching the stance already taken on an unmatched glob. `--limit 0` reported
   "5 matches" beside an empty list, and `--limit abc` reached the core as `NaN`
-  and read as "no such feature" — a typo answered with a confident nothing. The
+  and read as "no such feature", a typo answered with a confident nothing. The
   MCP schema already rejected both; the CLI is where they were reachable.
 
   `version_requested` is gone from the individual entries of the `support`
@@ -86,50 +85,50 @@ was.
 
 - The MCP server keeps its feature array across a revalidation that finds
   upstream unmoved, so the memoised title tables survive with it, while still
-  adopting the fresh `meta` — `data_source` has to keep telling the truth about
+  adopting the fresh `meta`. `data_source` has to keep telling the truth about
   `source` and `fetchedAt`, which is the thing the 15-minute revalidation exists
-  to get right. Measured at about 1ms per revalidation and no more: the parse
-  and the index still happen. It is here because unmoved data being the same
-  dataset is worth saying, not for the microseconds.
+  to get right. Measured at about 1ms per revalidation and no more, since the
+  parse and the index still happen. It is here because unmoved data being the
+  same dataset is worth saying, not for the microseconds.
 
 - The dataset cache is covered by tests. It was the least-tested code in the
   repo and it is what implements the promise that a stale answer is visibly
   stale: `meta.source` and `meta.warning` are computed nowhere else, every path
   that produces them is a failure path, and none of them ran in CI. Twelve cases
-  now drive `loadDataset` against a loopback HTTP server — the freshness
+  now drive `loadDataset` against a loopback HTTP server, covering the freshness
   boundary, a cache truncated by a concurrent write, an error status whose body
-  parses, a server that accepts the connection and says nothing, a cache
-  directory that cannot be written — and each was checked by breaking the
-  behaviour it guards and confirming it failed. Coverage of the core went from
-  91.6% to 99.7% of lines.
+  parses, a server that accepts the connection and says nothing, and a cache
+  directory that cannot be written. Each was checked by breaking the behaviour
+  it guards and confirming it failed. Coverage of the core went from 91.6% to
+  99.7% of lines.
 
   `loadDataset` takes a `dataUrl` option, which is what makes that possible.
-  It is a real option rather than a test hook: it points at a mirror or a proxy
+  It is a real option rather than a test hook, pointing at a mirror or a proxy
   for anyone who cannot reach caniemail.com directly.
 
 - The dataset snapshot can no longer decay unnoticed. A weekly workflow
-  refetches it, and opens a pull request only when upstream has actually moved —
-  a no-op PR every Monday would just teach the reviewer to ignore the ones that
-  matter. The body is the review artifact: `last_update_date` before and after,
+  refetches it, and opens a pull request only when upstream has moved. A no-op
+  PR every Monday would just teach the reviewer to ignore the ones that matter.
+  The body is the review artifact: `last_update_date` before and after,
   the feature count, added and removed slugs, and every support cell that
   flipped, because most refreshes change verdicts rather than the feature list.
   The suite runs before and after `make goldens` so a detection-output move
   reads differently from a real break. Refreshing has always been able to move
   golden files; that was fine while it was a deliberate command and a silent
-  liability once it stopped being run — the snapshot is both the offline
+  liability once it stopped being run, since the snapshot is both the offline
   fallback and the fixture every test runs against.
 
 - Dependency updates are automated. Dependabot watches npm weekly from the
-  workspace root — which is the only correct entry for a pnpm workspace, since
-  Dependabot resolves every member from the directory holding the lockfile and
-  rejects a second entry pointing inside it — plus the GitHub Actions pins in
+  workspace root, the only correct entry for a pnpm workspace, since Dependabot
+  resolves every member from the directory holding the lockfile and rejects a
+  second entry pointing inside it. It also watches the GitHub Actions pins in
   CI, which nothing else ever looks at. Minor and patch bumps group into one PR
   per ecosystem; majors stay separate, because an MCP SDK major is a surface
   change to review rather than a bump to merge.
 
 - `lint_email` costs about half what it did. A realistic newsletter against all
-  48 clients went from 75KB to 41KB — roughly 19k tokens to 10k — with nothing
-  removed from the result. Both surfaces now emit compact JSON (the CLI still
+  48 clients went from 75KB to 41KB, roughly 19k tokens down to 10k, with
+  nothing removed from the result. Both surfaces now emit compact JSON (the CLI still
   indents at a TTY), which alone was 28% of the payload; the per-severity
   `guidance` paragraph moved from every finding to one legend on the result;
   `clients_affected` is compressed against the clients actually checked, so `*`
@@ -140,7 +139,7 @@ was.
   half the payload, but "untested is not evidence of support" is the single most
   load-bearing claim this tool makes, and defaulting it off would have quietly
   undone that to save bytes. Likewise `url` stays on every finding even though it
-  is derivable from the slug: an agent citing a source should not have to
+  is derivable from the slug, because an agent citing a source should not have to
   reassemble the link.
 
 - Lint findings report **every** occurrence of a feature, not just the first.
@@ -152,13 +151,13 @@ was.
 - The MCP server revalidates its dataset as it runs, every 15 minutes, instead of
   loading once at startup. A server lives as long as the editor session, so the
   old behaviour kept reporting `data_source.source: "live"` with no warning and a
-  `fetchedAt` from days earlier — exactly the silent staleness that field exists
+  `fetchedAt` from days earlier, exactly the silent staleness that field exists
   to prevent. Startup now reads only the bundled snapshot, so the handshake never
   waits on caniemail.com; the first tool call fetches.
 
 - `check_feature_support` pins a version per client instead of failing the call.
   `--version 2016` over `outlook.*` used to throw because a sibling client
-  versions itself by date, naming a client the caller never asked about — while
+  versions itself by date, naming a client the caller never asked about, while
   the documentation advertised that exact query as the common case. Clients with
   no such version now resolve to `untested` with `version_requested` set. A
   version *no* requested client carries is still an error, so a typo is still
@@ -168,7 +167,7 @@ was.
   ship, both have argument handling the core suite cannot reach, and only the MCP
   server was ever executed by CI. The same file guards the no-install property by
   asserting the vendored modules import nothing but `node:` builtins and relative
-  paths — pnpm enforces that for `mcp/`, but `skill/` has no `node_modules` to be
+  paths. pnpm enforces that for `mcp/`, but `skill/` has no `node_modules` to be
   isolated from.
 
 - The dataset cache is written atomically. The two surfaces share one cache
@@ -189,7 +188,7 @@ was.
   into something resolution enforces rather than something to remember.
   Publishing stays on npm.
 
-## 0.1.0 — 2026-08-04
+## 0.1.0 - 2026-08-04
 
 First release. The skill ships to ClawHub as `email-compat`, the MCP server to
 npm as `mcp-server-caniemail`. The two are independent artifacts on independent
@@ -197,7 +196,7 @@ channels; `docs/releasing.md` has the process for each.
 
 - Shared core (`core/`) resolving caniemail support data with all four verdicts
   intact: `supported`, `unsupported`, `mitigated`, `untested`. Zero runtime
-  dependencies — Node 22+ and nothing else.
+  dependencies, Node 22+ and nothing else.
 - Skill surface: `SKILL.md` with HTML email authoring rules, plus a CLI
   (`search`, `check`, `lint`, `clients`).
 - MCP surface: `mcp-server-caniemail`, exposing `lint_email`,
@@ -227,6 +226,6 @@ regression test:
 
 Notes are scoped to the verdict they describe. A note attached to one client's
 cell no longer travels onto another client's finding, and the feature-level
-remark is surfaced separately as `feature_notes` — otherwise `css-gap` reports
+remark is surfaced separately as `feature_notes`. Otherwise `css-gap` reports
 as a hard failure in Outlook annotated "Partial. Supports column-gap", which is
 Gmail's note.
