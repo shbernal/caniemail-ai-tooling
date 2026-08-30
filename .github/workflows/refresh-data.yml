@@ -149,6 +149,12 @@ jobs:
           git push --force origin "$BRANCH"
 
           if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            # The body is rewritten as well as commented on. A comment alone
+            # leaves the PR opening with the previous run's verdict, so a
+            # refresh that failed and was then fixed still reads as failing
+            # until the reviewer scrolls; the comment says a new run happened,
+            # the body says what is true now.
+            gh pr edit "$BRANCH" --body-file "${RUNNER_TEMP}/body.md"
             gh pr comment "$BRANCH" --body-file "${RUNNER_TEMP}/body.md"
             echo "Updated the open refresh PR."
           else
