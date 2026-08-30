@@ -55,8 +55,8 @@ What a fix has to ship on:
   core change is normally both, since both vendor it.
 - **`skill/SKILL.md`** needs a ClawHub bump. The skill artifact embeds it, so a
   description or trigger fix does not reach users without a release.
-- **Root `README.md`** and **`docs/`** ship in neither artifact. Commit them;
-  publish nothing.
+- **Root `README.md`**, **`CONTRIBUTING.md`** and **`docs/`** ship in neither
+  artifact. Commit them; publish nothing.
 - **`mcp/README.md`** is the npm project page, so a fix only shows up on a new
   release.
 - **`CHANGELOG.md`** ships in neither artifact either, but every version bump
