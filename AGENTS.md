@@ -150,8 +150,14 @@ read a bundled dataset as the primary source.**
   `https://www.caniemail.com/api/data.json`, fetched at runtime and cached.
   `core/data/caniemail.json` is a committed snapshot serving two jobs: the
   offline fallback, and the deterministic dataset the tests run against. It is
-  never the primary. `meta.source` always names which copy answered. Refresh it
-  with `make refresh-data`, which will move golden files. That is the signal,
+  never the primary. `meta.source` always names which copy answered. A live copy
+  has to look like the dataset before it is believed: `isDatasetShaped` rejects
+  a 200 whose body parses but carries no feature records, so an endpoint that
+  has moved takes the same route down to the cache and the bundle as a 500 does.
+  It is checked before the cache write, and on every read, because the cost of
+  believing one was a day of every process on the machine sharing the bad copy.
+  Refresh the snapshot with `make refresh-data`, which will move golden files.
+  That is the signal,
   not a problem. A weekly workflow (`.github/workflows/refresh-data.yml`) runs
   that refresh and opens a PR when upstream has moved, so the snapshot cannot
   decay unnoticed in either of its roles; it opens nothing when the refetch is

@@ -80,6 +80,47 @@ function defaultCacheDir() {
   }
 }
 
+/**
+ * Is this shaped like the caniemail dataset?
+ *
+ * A 200 response carrying well-formed JSON used to be accepted on the strength
+ * of the JSON alone. `indexDataset` reads `raw.data ?? []`, so an endpoint that
+ * had moved and said so — `{"message": "API moved to /v2/data.json"}` — indexed
+ * to zero features and was returned as `source: "live"` with `warning: null`,
+ * then written to the shared disk cache and served from there for the next 24
+ * hours. Every promise this project makes about a stale answer being visibly
+ * stale was intact and pointing the wrong way: `search_features` reported every
+ * feature as nonexistent, and `check_feature_support` and `lint_email` failed
+ * with "No client matches", which reads as the caller's typo.
+ *
+ * The test is structural rather than a count. What distinguishes a dataset from
+ * an error page decoded as JSON is that its entries are feature records, and
+ * that is as true of the one-feature fixture the loopback tests serve as it is
+ * of the full dataset upstream publishes. `make refresh-data` applies a `>= 250`
+ * floor on top of this one, because "is this the whole dataset" is the right
+ * question for the committed snapshot and the wrong one at runtime, where
+ * `dataUrl` may legitimately point at a mirror or a proxy.
+ *
+ * The bundled snapshot is deliberately not put through this. It is committed,
+ * it is what the suite runs against, and it is the last rung of the ladder —
+ * rejecting it would leave nothing to fall back to.
+ *
+ * @param {any} raw
+ * @returns {boolean}
+ */
+export function isDatasetShaped(raw) {
+  const features = raw?.data;
+  if (!Array.isArray(features) || features.length === 0) return false;
+  return features.every(
+    (feature) =>
+      feature !== null &&
+      typeof feature === 'object' &&
+      typeof feature.slug === 'string' &&
+      feature.stats !== null &&
+      typeof feature.stats === 'object',
+  );
+}
+
 function indexDataset(raw, meta) {
   const features = raw.data ?? [];
 
@@ -152,6 +193,10 @@ export async function loadDataset(options = {}) {
         const cached = JSON.parse(await readFile(cacheFile, 'utf8'));
         const age = Date.now() - Date.parse(cached.fetchedAt);
         if (Number.isFinite(age) && age < maxAgeMs) {
+          // Misshapen is corrupt. A cache written before this check existed is
+          // still on disk, so the guard on the fetch below is not enough on its
+          // own to end an ongoing poisoning — this is the line that does.
+          if (!isDatasetShaped(cached.raw)) throw new Error('cached dataset is not shaped like one');
           return indexDataset(cached.raw, { source: 'cache', fetchedAt: cached.fetchedAt, warning: null });
         }
       }
@@ -166,6 +211,14 @@ export async function loadDataset(options = {}) {
       clearTimeout(timer);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const raw = await response.json();
+      // Parsing as JSON is not evidence of being the dataset, and this throw is
+      // what keeps the two apart. It lands in the catch below, so a response
+      // that is merely well-formed takes the same route as a 500 or a timeout:
+      // down to the cache, then to the bundle, with a warning saying so. Placed
+      // ahead of the cache write on purpose — the damage worth preventing is
+      // not one bad answer, it is one bad answer persisted for a day and shared
+      // with every other process on this machine.
+      if (!isDatasetShaped(raw)) throw new Error('response is not shaped like the dataset');
       const fetchedAt = new Date().toISOString();
       try {
         // Written to a per-process temp file and renamed, because the two
@@ -194,6 +247,7 @@ export async function loadDataset(options = {}) {
     try {
       if (existsSync(cacheFile)) {
         const cached = JSON.parse(await readFile(cacheFile, 'utf8'));
+        if (!isDatasetShaped(cached.raw)) throw new Error('cached dataset is not shaped like one');
         return indexDataset(cached.raw, {
           source: 'cache',
           fetchedAt: cached.fetchedAt,

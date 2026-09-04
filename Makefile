@@ -67,10 +67,17 @@ goldens:
 # The snapshot is both the offline fallback and the dataset the tests run
 # against, so refreshing it can move golden files and test expectations. That
 # is the intended signal, not a problem to work around.
+# The shape check is `isDatasetShaped` from the core, so "is this the dataset"
+# has one definition rather than one here and one at load time. The `>= 250`
+# floor stays local to this target: it asks whether this is the *whole* dataset,
+# which is the right question for the committed snapshot and the wrong one for
+# `loadDataset`, where `dataUrl` may point at a mirror serving a subset.
 refresh-data:
 	curl -fsSL --max-time 60 $(DATA_URL) -o core/data/caniemail.json
 	@node --input-type=module -e "import d from './core/data/caniemail.json' with { type: 'json' }; \
-		if (!Array.isArray(d.data) || d.data.length < 250) throw new Error('refetched dataset looks wrong'); \
+		import { isDatasetShaped } from './core/caniemail-core.mjs'; \
+		if (!isDatasetShaped(d)) throw new Error('refetched dataset is not shaped like the dataset'); \
+		if (d.data.length < 250) throw new Error('refetched dataset has only ' + d.data.length + ' features'); \
 		console.log('ok  ' + d.data.length + ' features, last update ' + d.last_update_date)"
 	@echo "now run: make sync-core test goldens"
 

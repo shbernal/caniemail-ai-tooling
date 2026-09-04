@@ -163,6 +163,10 @@ writing. A snapshot in `core/data/caniemail.json` is the offline fallback, so a
 skill copied onto a machine with no network still answers, and every result
 names which copy answered.
 
+A live response has to look like the dataset before it is believed. An endpoint
+that has moved and says so in valid JSON falls back to the snapshot, rather than
+answering every question with an empty matrix and calling it live data.
+
 ## Contributing
 
 `CONTRIBUTING.md` has the setup and the test targets. The rule worth knowing

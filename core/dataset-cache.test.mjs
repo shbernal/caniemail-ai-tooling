@@ -33,6 +33,11 @@ import { loadDataset } from './caniemail-core.mjs';
  * A dataset small enough to read, and distinguishable from the bundled
  * snapshot at a glance — every assertion about *which* copy answered turns on
  * telling these two apart.
+ *
+ * One feature, and that is load-bearing twice over. `isDatasetShaped` has to
+ * accept it, which is what keeps the guard structural: a count threshold would
+ * reject this fixture and every test below it, and would be wrong anyway, since
+ * `dataUrl` is allowed to point at a mirror serving a subset.
  */
 const REMOTE = {
   last_update_date: '2031-01-01 00:00:00 +0000',
@@ -208,11 +213,12 @@ test('a body that is not JSON counts as a failed fetch', async (t) => {
 
 test('an error status is an error even when its body parses', async (t) => {
   const h = await harness(t, (_request, response) => {
-    // The dangerous shape: a gateway or an API that answers every request with
-    // JSON, error or not. The body parses, `data` is absent, and `indexDataset`
-    // would happily produce an empty dataset labelled `source: "live"` — a
-    // confident answer that every feature is unknown. Only the status check
-    // stands between that and the caller.
+    // A gateway or an API that answers every request with JSON, error or not.
+    // The body parses and `data` is absent, so `indexDataset` would produce an
+    // empty dataset labelled `source: "live"` — a confident answer that every
+    // feature is unknown. Two things stand between that and the caller now, the
+    // status check here and the shape check in the test below; this one pins
+    // the status check, so a body like this is rejected on the cheaper ground.
     response.writeHead(502, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ error: 'bad gateway' }));
   });
@@ -221,6 +227,46 @@ test('an error status is an error even when its body parses', async (t) => {
 
   assert.equal(dataset.meta.source, 'bundled');
   assert.ok(dataset.features.length > 250, 'an error body must never index as a dataset');
+});
+
+test('a 200 carrying JSON that is not the dataset counts as a failed fetch', async (t) => {
+  const h = await harness(t, (_request, response) => {
+    // The case the status check cannot reach, and the one an endpoint that has
+    // moved actually produces: a genuine 200, valid JSON, no `data`. Until the
+    // shape check this was accepted on the strength of the JSON alone and
+    // returned as `source: "live"` with `warning: null` and zero features.
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ message: 'API moved to /v2/data.json' }));
+  });
+
+  const dataset = await h.load();
+
+  assert.equal(dataset.meta.source, 'bundled');
+  assert.match(dataset.meta.warning, /Live fetch and cache both unavailable/);
+  assert.ok(dataset.features.length > 250, 'a misshapen body must never index as a dataset');
+
+  // The half that outlives the incident. A cached misshapen body is served for
+  // the next 24 hours by this process and every other one sharing the directory,
+  // so the write has to be what does not happen — not merely the answer.
+  assert.deepEqual(await readdir(h.cacheDir), [], 'nothing may reach the cache');
+});
+
+test('a misshapen cache is refetched even while it is still fresh', async (t) => {
+  // A cache written before the shape check existed is still on disk and still
+  // inside its 24 hours, so guarding only the fetch would leave an ongoing
+  // poisoning to expire on its own. Fresh enough to short-circuit the network,
+  // and it must not.
+  const h = await harness(t);
+  await h.seedCache({ message: 'API moved to /v2/data.json' }, 60_000);
+
+  const dataset = await h.load({ maxAgeMs: 24 * 60 * 60 * 1000 });
+
+  assert.equal(h.hits, 1, 'a misshapen cache must not short-circuit the fetch');
+  assert.equal(dataset.meta.source, 'live');
+  assert.deepEqual(dataset.clients, ['loopback.server']);
+
+  const written = JSON.parse(await readFile(h.cacheFile, 'utf8'));
+  assert.deepEqual(written.raw, REMOTE, 'the good copy replaces the bad one');
 });
 
 test('a failed fetch with no cache falls back to the bundled snapshot', async (t) => {

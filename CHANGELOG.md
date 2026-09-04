@@ -1,5 +1,28 @@
 # Changelog
 
+## Unreleased
+
+- A live fetch now has to return something shaped like the dataset before it is
+  believed. `indexDataset` reads `raw.data ?? []`, so a 200 carrying valid JSON
+  with no feature records indexed to zero features and was returned as
+  `source: "live"` with `warning: null`. An endpoint that had moved and said so
+  produced a confident empty matrix: `search_features` reported every feature as
+  nonexistent, and `check_feature_support` and `lint_email` failed with
+  "No client matches", which reads as the caller's typo.
+
+  The check is structural rather than a count, so it accepts a mirror serving a
+  subset and rejects an error page that happens to parse. A body that fails it
+  takes the same route as a 500, down to the cache and then the bundle, with the
+  warning that says so. It runs before the cache write and on every cache read,
+  because the write is what turned one bad response into a day of it for every
+  process sharing the directory, and a cache written before this existed is
+  still on disk. `make refresh-data` shares the predicate and keeps its own
+  `>= 250` floor on top, which asks whether this is the *whole* dataset, the
+  right question for the committed snapshot and the wrong one at runtime.
+
+  Nothing changes for a caller getting real data. `isDatasetShaped` is exported
+  in case a mirror wants to check its own copy.
+
 ## 0.2.1 - 2026-08-30
 
 - The dataset snapshot both surfaces ship as their offline fallback moves from
