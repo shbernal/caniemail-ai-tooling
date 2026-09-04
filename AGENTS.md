@@ -281,7 +281,11 @@ is the review artifact.
   nine published files.
 - Tests use `node:test`, run offline against `core/data/caniemail.json`, and
   stay deterministic. Network tests are gated behind `CANIEMAIL_TEST_NETWORK=1`
-  and excluded from the default target. "Offline" means **no external
+  and excluded from the default target, so nothing a commit is judged on ever
+  reaches caniemail.com. They do run: `ci.yml`'s `network` job runs
+  `make test-network` nightly, and on a schedule a failure means upstream moved
+  rather than this change is broken. Before that job existed the live path had
+  no automated coverage at all. "Offline" means **no external
   dependency**, not no sockets: the rule exists so a caniemail.com outage cannot
   read as a broken commit, and `core/dataset-cache.test.mjs` runs a loopback
   `node:http` server on `127.0.0.1` without breaking it. That is deliberate.

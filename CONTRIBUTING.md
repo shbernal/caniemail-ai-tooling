@@ -35,9 +35,10 @@ make smoke          # drives the MCP server over real stdio JSON-RPC
 make check-vendor   # the vendored copies match the core, byte for byte
 ```
 
-CI runs all of these except `test-network`, on Node 22 and 24. The pre-commit
-hook runs `make test` and `make check-vendor`, so a stale vendored copy cannot
-be committed.
+CI runs the first three on Node 22 and 24, on every push and pull request.
+`test-network` runs nightly instead, on its own job, so an outage at
+caniemail.com cannot fail your patch. The pre-commit hook runs `make test` and
+`make check-vendor`, so a stale vendored copy cannot be committed.
 
 ## Edit the core, never a copy
 

@@ -5,14 +5,19 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # The live-fetch check below, and nothing else. See the comment on `network`.
+  schedule:
+    - cron: '17 6 * * *'
   # publish.yml calls this before it uploads anything. A tag push does not
   # match `branches: [main]`, so without this the released ref would reach both
   # registries with nothing verified on it.
   workflow_call:
 
-# The network test is deliberately absent: it hits www.caniemail.com, so a
-# caniemail.com outage must not read as a broken commit. Everything here runs
-# offline against core/data/caniemail.json.
+# `test` runs offline against core/data/caniemail.json. `network` is the one job
+# that touches www.caniemail.com, and it runs on a schedule only — never on a
+# push, a pull request or a release. That split is the whole point: a
+# caniemail.com outage must not read as a broken commit, and until now the
+# alternative was that the live path had no automated coverage at all.
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -53,3 +58,37 @@ jobs:
       # does not reach. mcp/node_modules came from the workspace install above.
       - name: Drive the MCP server over stdio
         run: make smoke
+
+  # The live path — a real fetch of https://www.caniemail.com/api/data.json —
+  # which `test` cannot cover and the loopback server in dataset-cache.test.mjs
+  # deliberately does not: it exercises the genuine `fetch` against a stand-in
+  # endpoint, so it proves the ladder works and says nothing about whether the
+  # real one still answers or still answers with a dataset. `make refresh-data`
+  # would notice a URL that 404s, but only weekly and only as a side effect.
+  #
+  # Scheduled only. Running this on a push would hand caniemail.com a veto over
+  # whether a commit here is green, which is the reason the network test was
+  # gated behind an environment variable in the first place. What it lacked was
+  # anywhere to run; a nightly job is somewhere a failure means "upstream moved"
+  # rather than "this change is broken".
+  network:
+    if: >-
+      github.repository == 'shbernal/caniemail-ai-tooling' &&
+      (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The whole suite with CANIEMAIL_TEST_NETWORK=1, which adds the live-fetch
+      # assertion that upstream never serves a dataset older than the snapshot
+      # both surfaces ship. That failing means either the snapshot has run ahead
+      # of the site or the endpoint is no longer returning the dataset.
+      - name: Run the suite against the live endpoint
+        run: make test-network
