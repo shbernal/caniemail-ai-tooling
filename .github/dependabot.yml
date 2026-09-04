@@ -27,8 +27,11 @@ updates:
           - minor
           - patch
 
-  # The CI workflow pins `actions/checkout@v5`, `pnpm/action-setup@v4` and
-  # friends. Nothing else ever looks at those pins, so they go stale silently.
+  # The workflows pin `actions/checkout`, `actions/setup-node` and
+  # `pnpm/action-setup` by major. Nothing else ever looks at those pins, so they
+  # go stale silently. Named without their versions on purpose: the last time
+  # they were written out, Dependabot moved the pins and left this sentence
+  # describing majors that had not been current for a month.
   - package-ecosystem: github-actions
     directory: /
     schedule:

@@ -20,14 +20,20 @@ from a bare checkout with no `package.json` and no install step.
 
 ## Released
 
-`v0.1.0` was tagged and released on 2026-08-04, and both surfaces are live:
-`mcp-server-caniemail` on npm and `email-compat` on ClawHub.
-`docs/releasing.md` has the process for each. Publishing is automated.
-`.github/workflows/publish.yml` uploads to npm on a `v*` tag push and to
-ClawHub on a published release, and it re-runs the full suite on the released
-ref first. A tag does not match CI's `branches: [main]` filter, so without that
-job the released commit would reach both registries with nothing verified on it.
-Both halves are idempotent, so a partly-failed release can be re-run.
+Both surfaces are live: `mcp-server-caniemail` on npm and `email-compat` on
+ClawHub. `docs/releasing.md` has the process for each.
+
+Which version is current is deliberately not written here. `git tag` and the top
+of `CHANGELOG.md` both answer it, and a number copied into prose is one more
+thing a release has to remember to move. This file went two releases describing
+the first one.
+
+Publishing is automated. `.github/workflows/publish.yml` uploads to npm on a
+`v*` tag push and to ClawHub on a published release, and it re-runs the full
+suite on the released ref first. A tag does not match CI's `branches: [main]`
+filter, so without that job the released commit would reach both registries with
+nothing verified on it. Both halves are idempotent, so a partly-failed release
+can be re-run.
 
 Both registries treat a version as permanent. Never delete or re-publish a
 released version; fix forward with a version bump on whichever surfaces are
@@ -238,7 +244,7 @@ The pieces:
   so on) rather than freezing a list, so a feature added upstream is picked up
   without a release here. The cost is that a novel title *shape* goes unnoticed;
   the coverage test in `core/feature-titles.test.mjs` is the tripwire, asserting
-  that exactly four of the 307 features are unreachable (`BIMI`, `Base 64 image
+  that exactly four features are unreachable (`BIMI`, `Base 64 image
   format`, `HDR image format`, `Video as Image Assets`, none of them
   expressible in markup). If that count moves, a convention has gone stale.
 

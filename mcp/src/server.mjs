@@ -7,8 +7,8 @@
  * responses.
  *
  * Four tools rather than one. A single `get_caniemail_data` that returned the
- * whole matrix would be 620KB of JSON — 307 features across 48 clients — and
- * would exhaust an agent's context before it did anything useful. Each tool
+ * whole matrix would be 620KB of JSON, roughly 300 features across 48 clients,
+ * and would exhaust an agent's context before it did anything useful. Each tool
  * here answers one question and returns only what that question needs.
  */
 

@@ -20,8 +20,8 @@ There is no public instance of this server, and nobody is running one for you.
 ## What it does
 
 Three tools, deliberately not one. A single "give me the caniemail data" tool
-would return 620KB of JSON, 307 features across 48 clients, and exhaust an
-agent's context before it did anything useful.
+would return 620KB of JSON, roughly 300 features across 48 clients, and exhaust
+an agent's context before it did anything useful.
 
 - `lint_email` is the workhorse. Give it your drafted HTML/CSS and a client
   list; it returns only what breaks, with every source position the feature was
