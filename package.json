@@ -1,6 +1,6 @@
 {
   "name": "caniemail-ai-tooling",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": true,
   "description": "Skill and MCP server giving AI agents correct access to the caniemail dataset",
   "type": "module",

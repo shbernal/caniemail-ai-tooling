@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is
   believed. `indexDataset` reads `raw.data ?? []`, so a 200 carrying valid JSON
@@ -22,6 +22,20 @@
 
   Nothing changes for a caller getting real data. `isDatasetShaped` is exported
   in case a mirror wants to check its own copy.
+
+- The live-fetch test runs nightly instead of never. It has always been gated
+  behind `CANIEMAIL_TEST_NETWORK=1` and excluded from `make test`, so that a
+  caniemail.com outage could not read as a broken commit here. What it never had
+  was anywhere to run: no job set that variable, and the one code path that
+  actually talks to upstream had no automated coverage at all. `ci.yml` now has a
+  `network` job on a daily schedule, and only on a schedule, never on a push or a
+  pull request. Upstream keeps no veto over whether a commit is green, and a
+  failure there means upstream moved rather than this change is broken.
+
+  The loopback server in `core/dataset-cache.test.mjs` does not cover this and is
+  not meant to. It exercises the real `fetch` against a stand-in endpoint, which
+  proves the fetch-and-cache ladder works and says nothing about whether
+  caniemail.com still answers, or still answers with a dataset.
 
 ## 0.2.1 - 2026-08-30
 

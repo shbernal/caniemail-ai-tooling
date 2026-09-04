@@ -1,6 +1,6 @@
 {
   "name": "mcp-server-caniemail",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "MCP server for email client HTML/CSS compatibility, backed by caniemail.com",
   "type": "module",
   "author": "shbernal",
