@@ -62,7 +62,7 @@ npx skills add shbernal/caniemail-ai-tooling   # or straight from this repo
 
 `skills` puts it in `.agents/skills/` in the current project, or takes `-g` for
 `~/.agents/skills/` instead. Either way there is no install step afterwards.
-The skill has no dependencies, and Node 22+ is the whole requirement.
+The skill has no dependencies, and Node 24+ is the whole requirement.
 
 Or point your agent at the CLI directly:
 

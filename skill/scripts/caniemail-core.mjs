@@ -7,7 +7,7 @@
  *
  * Plain ESM with JSDoc types rather than TypeScript, so the vendored copies
  * need no build step on either surface. There are no runtime dependencies at
- * all: Node 22+ and nothing else. Detection lives in `detect.mjs` and the
+ * all: Node 24+ and nothing else. Detection lives in `detect.mjs` and the
  * scanners beside it; resolution lives here.
  *
  * Detection and resolution are kept apart on purpose. "What does this markup

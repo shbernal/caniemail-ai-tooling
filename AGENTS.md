@@ -14,7 +14,7 @@ skill/    SKILL.md, a CLI, and a vendored copy of the core
 mcp/      the mcp-server-caniemail npm package, a thin adapter over the core
 ```
 
-The shipped core has **zero runtime dependencies**. Node 22+ and nothing else.
+The shipped core has **zero runtime dependencies**. Node 24+ and nothing else.
 That is a property to preserve, not an accident: it is what lets `skill/` run
 from a bare checkout with no `package.json` and no install step.
 
@@ -273,7 +273,7 @@ is the review artifact.
 
 ## Conventions
 
-- Node 22+. The core has **no runtime dependencies**. Do not add one. The
+- Node 24+. The core has **no runtime dependencies**. Do not add one. The
   no-install property of `skill/` depends on it, and `mcp/` should carry nothing
   beyond the MCP SDK and `zod`. pnpm's isolated `node_modules` enforces this for
   `mcp/`; `skill/` has no `node_modules` to be isolated from, so a test in

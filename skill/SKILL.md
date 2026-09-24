@@ -17,7 +17,7 @@ Gmail strips `<style>` blocks in some contexts, and support for anything modern
 is patchy and undocumented. This skill covers both halves of the problem. Write
 markup that survives, then verify it against real data.
 
-`scripts/caniemail.mjs` queries the caniemail.com dataset. Node 22+ and nothing
+`scripts/caniemail.mjs` queries the caniemail.com dataset. Node 24+ and nothing
 else, with no dependencies and no install step. It works offline against a
 bundled dataset snapshot, and says so when it does.
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- The supported Node floor moves from 22 to 24, on both surfaces. Node 22 is in
+  maintenance and takes security fixes only, so testing against it bought a
+  compatibility claim for a line nothing here is developed on. `engines` in both
+  manifests now reads `>=24.0.0`, and CI's matrix is the floor plus whatever Node
+  is current, which is where a Node release that breaks something shows up.
+
+  Nothing in the code needed a newer runtime; this is the support promise
+  changing, not the implementation. On Node 22 the MCP server still runs and npm
+  will now warn about it.
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is

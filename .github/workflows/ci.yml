@@ -24,7 +24,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: ['22', '24']
+        # The supported floor, and whatever Node is current. The floor is what
+        # `engines` promises; `current` is the tripwire for a Node release that
+        # breaks something here, which is worth hearing about from CI rather
+        # than from a user on a new machine.
+        node: ['24', 'current']
 
     steps:
       - uses: actions/checkout@v7
@@ -82,7 +86,7 @@ jobs:
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 

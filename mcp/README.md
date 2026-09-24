@@ -21,7 +21,7 @@ broken.
 }
 ```
 
-Node 22+. Set `CANIEMAIL_OFFLINE=1` to skip the network and use the bundled
+Node 24+. Set `CANIEMAIL_OFFLINE=1` to skip the network and use the bundled
 dataset.
 
 ## Tools
