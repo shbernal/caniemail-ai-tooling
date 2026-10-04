@@ -417,6 +417,12 @@ function skipComment(source, from, limit) {
  * otherwise run to `limit` and take every rule after it along. Stopping at the
  * brace rather than stepping back to `from` is what keeps a run of unclosed
  * groups linear, since nothing between the two is ever scanned twice.
+ *
+ * It does not stop at a `;`, though that would keep `display:flex` in
+ * `.a{width:calc(1px; display:flex}`. A client reads an unclosed function to
+ * its `)` or the end of the stylesheet, `;` and `}` included, so it never
+ * applies that declaration, and stopping at the brace is already more than it
+ * keeps.
  */
 function skipNested(source, from, limit, open, close) {
   let depth = 0;
