@@ -24,8 +24,8 @@ remotes:
 # These are deliberately the same gates CI runs. The vendoring rule is the one
 # invariant a commit can quietly break — core/ and its copies under
 # skill/scripts and mcp/src must stay byte-identical — and until now nothing
-# enforced it except remembering to run `make sync-core`. Both commands are
-# fast (a few seconds together; the suite runs its files in parallel) and
+# enforced it except remembering to run `make sync-core`. All three commands
+# are fast (a few seconds together; the suite runs its files in parallel) and
 # read-only, so they always run rather than being scoped to changed paths: a
 # doc-only commit that happens to carry a stale vendored file should still fail.
 pre-commit:
@@ -34,6 +34,9 @@ pre-commit:
     check-vendor:
       run: make check-vendor
       fail_text: vendored copies drifted from core/ — run `make sync-core`
+    lint:
+      run: make lint
+      fail_text: oxlint found something; see .oxlintrc.json for the rule set
     test:
       run: make test
       fail_text: core suite failed

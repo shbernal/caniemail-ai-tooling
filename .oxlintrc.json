@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Categories are named rather than inherited, so a new oxlint release cannot
+  // change what fails a commit here without an edit to this file.
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error"
+  },
+  "env": {
+    "node": true,
+    "es2024": true
+  },
+  "rules": {
+    // Every `.sort()` here sorts an array built on the line before it, from a
+    // spread, a map or a filter. Nothing shared is mutated.
+    "unicorn/no-array-sort": "off",
+    // Test helpers sit inside the test that uses them, next to the inputs they
+    // describe. Hoisting them would move them away from their only reader.
+    "unicorn/consistent-function-scoping": "off",
+    // A test that builds its own `tables` from a fixture shadows the suite's
+    // on purpose: it is the same thing, built from different data.
+    "eslint/no-shadow": "off"
+  }
+}

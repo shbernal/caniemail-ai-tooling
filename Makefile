@@ -19,11 +19,12 @@ VENDOR_DIRS := $(foreach surface,$(SURFACES),$(firstword $(subst :, ,$(surface))
 
 DATA_URL := https://www.caniemail.com/api/data.json
 
-.PHONY: sync-core check-vendor test test-network goldens refresh-data smoke help
+.PHONY: sync-core check-vendor lint test test-network goldens refresh-data smoke help
 
 help:
 	@echo "sync-core     copy the core modules and dataset into both surfaces"
 	@echo "check-vendor  verify the vendored copies match"
+	@echo "lint          run oxlint over the core and both adapters"
 	@echo "test          run the core suite (no network)"
 	@echo "test-network  run the core suite including live-fetch tests"
 	@echo "goldens       regenerate fixtures/expected from current detection"
@@ -66,6 +67,14 @@ check-vendor:
 	done; \
 	[ $$status -eq 0 ] && echo "ok   $(words $(CORE_FILES)) files in each of: $(VENDOR_DIRS)"; \
 	exit $$status
+
+# The core and each surface's own adapter, and not the vendored copies: a
+# finding in one would be reported three times, and fixing it there is
+# forbidden anyway. check-vendor is what vouches for the copies.
+LINT_PATHS := core $(foreach surface,$(SURFACES),$(subst :,/,$(surface))) mcp/smoke.mjs .github/scripts
+
+lint:
+	pnpm exec oxlint --deny-warnings $(LINT_PATHS)
 
 test:
 	node --test 'core/*.test.mjs'

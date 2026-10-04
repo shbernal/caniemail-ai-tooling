@@ -33,13 +33,15 @@ make test           # core suite, no network
 make test-network   # adds the live-fetch test
 make smoke          # drives the MCP server over real stdio JSON-RPC
 make check-vendor   # the vendored copies match the core, byte for byte
+make lint           # oxlint over the core and both adapters
 ```
 
 CI runs the first three on Node 24 and on the current release, on every push and
 pull request.
 `test-network` runs nightly instead, on its own job, so an outage at
-caniemail.com cannot fail your patch. The pre-commit hook runs `make test` and
-`make check-vendor`, so a stale vendored copy cannot be committed.
+caniemail.com cannot fail your patch. The pre-commit hook runs `make test`,
+`make check-vendor` and `make lint`, so a stale vendored copy cannot be
+committed.
 
 ## Edit the core, never a copy
 

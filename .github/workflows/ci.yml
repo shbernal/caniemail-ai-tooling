@@ -53,6 +53,9 @@ jobs:
       - name: Check vendored copies match the core
         run: make check-vendor
 
+      - name: Lint
+        run: make lint
+
       # Includes the differential suite, which also pins detection output
       # against core/fixtures/expected.
       - name: Run the core suite

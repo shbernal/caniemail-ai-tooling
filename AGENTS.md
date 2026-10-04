@@ -106,6 +106,7 @@ make test           # core suite, no network
 make test-network   # adds the live-fetch test
 make sync-core      # copy the core into both surfaces, after any core edit
 make check-vendor   # verify the vendored copies match
+make lint           # oxlint over the core and both adapters, not the copies
 make goldens        # regenerate fixtures/expected after an intended change
 make refresh-data   # refetch the dataset snapshot
 make smoke          # drive the MCP server over real stdio JSON-RPC
@@ -113,10 +114,10 @@ make smoke          # drive the MCP server over real stdio JSON-RPC
 
 Run `make sync-core test check-vendor` before committing any core change.
 
-`make test` and `make check-vendor` also run as a lefthook `pre-commit` hook, so
-a forgotten `make sync-core` fails the commit rather than reaching a surface.
-Install the hooks once per clone with `pnpm install && pnpm exec lefthook
-install`; the same two gates run again in CI. `make sync-core` is deliberately
+`make test`, `make check-vendor` and `make lint` also run as a lefthook
+`pre-commit` hook, so a forgotten `make sync-core` fails the commit rather than
+reaching a surface. Install the hooks once per clone with `pnpm install && pnpm
+exec lefthook install`; the same three gates run again in CI. `make sync-core` is deliberately
 *not* automated. Vendoring is a decision to record in the commit, not a side
 effect of it.
 

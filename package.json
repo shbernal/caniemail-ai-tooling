@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "caniemail": "^2.0.2",
-    "lefthook": "^2.1.14"
+    "lefthook": "^2.1.14",
+    "oxlint": "^1.86.0"
   }
 }
