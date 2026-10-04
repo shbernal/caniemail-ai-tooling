@@ -66,7 +66,12 @@ const MAX_DEPTH = 64;
  */
 export function scanCss(source) {
   const out = { rules: [], declarations: [], atRules: [], comments: collectComments(source) };
-  parseStatements(source, 0, source.length, out, out.declarations, false, 0);
+  // A `}` with no block to close ends the statement list it appears in. At the
+  // top level there is nothing to hand it back to, so step over it and go on.
+  let i = 0;
+  while (i < source.length) {
+    i = parseStatements(source, i, source.length, out, out.declarations, false, 0) + 1;
+  }
   return out;
 }
 
@@ -365,18 +370,28 @@ function scanForward(source, from, limit, stopChars) {
   return -1;
 }
 
+/**
+ * One past a string's closing quote.
+ *
+ * A string that reaches a newline or `limit` unclosed is not a string: the
+ * quote is returned as one ordinary character and scanning carries on after
+ * it. CSS ends a string token at a newline for the same reason, so that a
+ * missing quote costs one declaration rather than the rest of the stylesheet.
+ */
 function skipString(source, from, limit) {
   const quote = source[from];
   let i = from + 1;
   while (i < limit) {
-    if (source[i] === '\\') {
+    const char = source[i];
+    if (char === '\\') {
       i += 2;
       continue;
     }
-    if (source[i] === quote) return i + 1;
+    if (char === quote) return i + 1;
+    if (char === '\n' || char === '\r' || char === '\f') break;
     i += 1;
   }
-  return limit;
+  return from + 1;
 }
 
 function skipComment(source, from, limit) {
@@ -384,11 +399,21 @@ function skipComment(source, from, limit) {
   return close === -1 || close >= limit ? limit : close + 2;
 }
 
+/**
+ * One past the `close` matching the `open` at `from`.
+ *
+ * A parenthesised or bracketed group that is still open at a `{` or `}` ends
+ * there, unclosed, and the brace is left for the caller: `url(x` would
+ * otherwise run to `limit` and take every rule after it along. Stopping at the
+ * brace rather than stepping back to `from` is what keeps a run of unclosed
+ * groups linear, since nothing between the two is ever scanned twice.
+ */
 function skipNested(source, from, limit, open, close) {
   let depth = 0;
   let i = from;
   while (i < limit) {
     const char = source[i];
+    if (open !== '{' && (char === '{' || char === '}')) return i;
     if (char === '\\') {
       i += 2;
       continue;

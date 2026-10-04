@@ -146,6 +146,39 @@ test('an unclosed block still yields what it contained', () => {
   assert.deepEqual(scan.atRules.map((rule) => rule.name), ['media']);
 });
 
+test('an unterminated string, url( or [ costs its own rule, not the stylesheet', () => {
+  const tail = '}\n.b{color:red}\n.c{background-color:blue}';
+  const bad = ['content:"oops', "font-family:'Foo", 'background:url(x'];
+  for (const declaration of bad) {
+    assert.deepEqual(
+      declarationsIn(`.a{${declaration}${tail}`),
+      [declaration, 'color:red', 'background-color:blue'],
+      `lost the rules after ${declaration}`,
+    );
+  }
+  const scan = scanCss(`.a[href{color:red${tail}`);
+  assert.deepEqual(
+    scan.rules.map((rule) => rule.selectors[0]),
+    ['.a[href', '.b', '.c'],
+  );
+});
+
+test('a string ends at a newline it does not escape', () => {
+  assert.deepEqual(declarationsIn('.a{content:"x\ncolor:red}'), ['content:"x\ncolor:red']);
+  assert.deepEqual(declarationsIn('.a{content:"x;\ncolor:red}'), ['content:"x', 'color:red']);
+  assert.deepEqual(declarationsIn('.a{content:"x\\\ny";color:red}'), ['content:"x\\\ny"', 'color:red']);
+});
+
+test('an unterminated comment runs to the end, as it does in every client', () => {
+  const css = '.a{color:red} /* .b{float:left}';
+  assert.deepEqual(declarationsIn(css), ['color:red']);
+  assert.deepEqual(scanCss(css).comments, [{ start: 14, end: css.length }]);
+});
+
+test('a stray closing brace at the top level does not end the stylesheet', () => {
+  assert.deepEqual(declarationsIn('} .a{color:red} } .b{float:left}'), ['color:red', 'float:left']);
+});
+
 test('scanning never throws, whatever the input', () => {
   const nasty = [
     '',

@@ -38,6 +38,19 @@
   email. The scanner now stops descending 64 blocks deep and steps over
   anything deeper as one unit, then carries on with the rest of the stylesheet.
 
+- One unterminated string, `url(` or `[` no longer hides the rest of the
+  stylesheet. Each ran to the end of the document looking for its closing
+  delimiter, so everything after it went unscanned and `lint_email` reported
+  `passed: true` for rules it never read. A string now ends at a newline it does
+  not escape, as CSS ends one, and an unclosed quote is read as an ordinary
+  character. An unclosed parenthesis or bracket ends at the next `{` or `}`.
+  A stray `}` at the top level of a stylesheet used to end the scan too, and is
+  now stepped over.
+
+  The cost is a `{` or `}` inside an *unquoted* `url()`, which now ends the
+  group early. Quoted URLs are unaffected. An unterminated comment still runs
+  to the end of the stylesheet, because it does in every client.
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is
