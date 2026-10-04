@@ -23,7 +23,6 @@
  * vendored copy, edit this file and run `make sync-core`.
  */
 
-const COMMENT_PATTERN = /\/\*[^]*?(?:\*\/|$)/g;
 const PROPERTY_CHAR = /[*#/\\\w-]/;
 
 /**
@@ -463,6 +462,16 @@ export function splitTopLevel(text, separator) {
   return parts;
 }
 
+/**
+ * `text` without its comments, found the way `collectComments` finds them, so
+ * a `/*` inside a string or after a backslash stays where it is.
+ */
 function stripComments(text) {
-  return text.replace(COMMENT_PATTERN, '');
+  let out = '';
+  let at = 0;
+  for (const { start, end } of collectComments(text)) {
+    out += text.slice(at, start);
+    at = end;
+  }
+  return out + text.slice(at);
 }

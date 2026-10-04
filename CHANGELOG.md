@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- A `/*` inside a CSS string or after a backslash is no longer stripped as a
+  comment. `content: "/* x */"` read as `""`, and the selector `.a\/*b` lost
+  everything from the `/*` on, while the same scan's comment list correctly
+  reported no comment in either.
+
 - The supported Node floor moves from 22 to 24, on both surfaces. Node 22 is in
   maintenance and takes security fixes only, so testing against it bought a
   compatibility claim for a line nothing here is developed on. `engines` in both

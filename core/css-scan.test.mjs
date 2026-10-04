@@ -137,6 +137,16 @@ test('comments are reported and stripped out of values', () => {
   assert.equal(scan.rules[0].declarations[0].value, 'red');
 });
 
+test('a comment opener inside a string or after a backslash is not stripped', () => {
+  const quoted = scanCss('.a { content: "/* x */" }');
+  assert.deepEqual(quoted.comments, []);
+  assert.equal(quoted.rules[0].declarations[0].value, '"/* x */"');
+
+  const escaped = scanCss('.a\\/*b { color: red }');
+  assert.deepEqual(escaped.comments, []);
+  assert.deepEqual(escaped.rules[0].selectors, ['.a\\/*b']);
+});
+
 test('a malformed declaration does not take the rest of the rule with it', () => {
   const scan = scanCss('.a { color red; float: left; display: grid }');
   assert.deepEqual(
