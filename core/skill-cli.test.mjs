@@ -151,6 +151,32 @@ test('a limit that cannot return anything fails here, where it is reachable', as
   assert.match(junk.stderr, /positive integer, not NaN/);
 });
 
+test('every command says which copy of the dataset answered', async () => {
+  const runs = [
+    ['search', 'flexbox'],
+    ['check', 'css-display-flex', '--clients', 'gmail.*'],
+    ['clients'],
+    ['lint', '--clients', 'gmail.*'],
+  ];
+  for (const args of runs) {
+    const result = await run([...args, '--offline'], { stdin: '<div>hi</div>' });
+    assert.equal(result.code, 0, result.stderr);
+    assert.equal(parse(result).data_source?.source, 'bundled', `${args[0]} has no data_source`);
+  }
+});
+
+test('a value flag followed by another flag is missing its value', async () => {
+  // It used to take the next flag as its value: a client called "--offline",
+  // and an offline run that went to the network.
+  const result = await run(['check', 'css-display-flex', '--clients', '--offline']);
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr, /--clients needs a value/);
+
+  const last = await run(['search', 'flexbox', '--offline', '--category']);
+  assert.match(last.stderr, /--category needs a value/);
+});
+
 test('a missing --clients is an error, not an empty pass', async () => {
   const result = await run(['search', 'flexbox', '--offline']);
   assert.equal(result.code, 0, 'search does not need --clients');

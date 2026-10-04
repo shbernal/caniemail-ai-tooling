@@ -57,6 +57,15 @@
   the ten positions kept for display. From the eleventh sighting on, each such
   duplicate counted again: fifteen of those rules reported twenty.
 
+- `searchFeatures` rejects an unknown category rather than returning nothing,
+  naming the categories the dataset has. The MCP schema already ruled one out;
+  on the CLI, `--category bogus` was a clean zero-result search.
+- The skill CLI's `clients` command carries `data_source`, as every other
+  command and the MCP tool already did.
+- A CLI flag that takes a value no longer swallows the flag after it.
+  `--clients --offline` read as a client named "--offline" and ran against the
+  network; it is now the error `--clients needs a value.`
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is

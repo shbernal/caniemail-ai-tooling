@@ -583,11 +583,22 @@ export function searchFeatures(dataset, query, options = {}) {
     throw new Error(`limit must be a positive integer, not ${shown}.`);
   }
 
+  // And again for a category: an unknown one filters out every feature. The
+  // valid set is read from the data, as the client roster is, not frozen here.
+  if (category !== undefined) {
+    const categories = [...new Set(dataset.features.map((feature) => feature.category))].sort();
+    if (!categories.includes(category)) {
+      throw new Error(
+        `Unknown category ${JSON.stringify(category)}. Use one of: ${categories.join(', ')}.`,
+      );
+    }
+  }
+
   const terms = needle.split(/\s+/);
   const scored = [];
 
   for (const feature of dataset.features) {
-    if (category && feature.category !== category) continue;
+    if (category !== undefined && feature.category !== category) continue;
 
     const keywordList = (feature.keywords ?? '')
       .toLowerCase()

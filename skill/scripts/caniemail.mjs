@@ -36,7 +36,7 @@ const USAGE = `caniemail — email client compatibility for HTML and CSS
   search   <query> [--category html|css|image|others] [--limit N]
            Find feature slugs by keyword. Start here; slugs are not guessable.
 
-  clients  List all 48 client identifiers.
+  clients  List every client identifier.
 
 Options:
   --clients   Comma-separated "family.platform" globs: outlook.windows,
@@ -58,7 +58,13 @@ function parseArgs(args) {
     if (key === 'offline' || key === 'refresh' || key === 'no-untested' || key === 'help') {
       flags[key] = true;
     } else {
-      flags[key] = args[++i];
+      // A value flag followed by another flag has no value. Consuming the flag
+      // as one turned `--clients --offline` into a client called "--offline"
+      // and an offline run into a networked one.
+      const value = args[i + 1];
+      if (value === undefined || value.startsWith('--')) throw new Error(`--${key} needs a value.`);
+      flags[key] = value;
+      i += 1;
     }
   }
   return { positional, flags };
@@ -140,7 +146,7 @@ async function main() {
     }
 
     case 'clients': {
-      print({ clients: listClients(dataset), count: dataset.clients.length });
+      print({ clients: listClients(dataset), count: dataset.clients.length, data_source: dataset.meta });
       return;
     }
 

@@ -268,6 +268,14 @@ test('search requires a query', () => {
   assert.throws(() => searchFeatures(dataset, '   '), /query is required/);
 });
 
+test('an unknown category is an error, not an empty result', () => {
+  assert.throws(
+    () => searchFeatures(dataset, 'flexbox', { category: 'bogus' }),
+    /Unknown category "bogus"\. Use one of: css, html, image, others\./,
+  );
+  assert.ok(searchFeatures(dataset, 'flexbox', { category: 'css' }).results.length > 0);
+});
+
 test('a limit that can return nothing is an error, not an empty result', () => {
   // The same stance as an unmatched glob. `limit: 0` returned `match_count: 42`
   // beside an empty `results`, and `--limit abc` on the CLI reached here as NaN
