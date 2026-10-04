@@ -495,6 +495,20 @@ test('the position list is capped but the occurrence count is not', () => {
   assert.match(radius.positions[0], /^1:/, 'the cap drops the latest, never the earliest');
 });
 
+test('a construct that raises one feature twice counts once, past the cap too', () => {
+  // Two URLs in one declaration raise the PNG title twice over the same range.
+  // Past the tenth sighting that range is no longer in the kept list, and the
+  // duplicate used to be counted as a new occurrence.
+  for (const n of [10, 11, 15]) {
+    const css = Array.from(
+      { length: n },
+      (_, i) => `.r${i} { background: url(a.png), url(b.png); }`,
+    ).join('\n');
+    const result = lintEmail(dataset, { css, clients: ['*'] });
+    assert.equal(result.features['image-png'].occurrence_count, n);
+  }
+});
+
 test('lint never reports passing features', () => {
   const result = lintEmail(dataset, {
     html: '<div style="color:red">hi</div>',

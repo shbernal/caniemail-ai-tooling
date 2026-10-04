@@ -51,6 +51,12 @@
   group early. Quoted URLs are unaffected. An unterminated comment still runs
   to the end of the stylesheet, because it does in every client.
 
+- `occurrence_count` is right past ten sightings. A construct that raises one
+  feature twice over the same range, such as `background: url(a.png),
+  url(b.png)` for PNG, is one sighting, but the duplicate check only looked at
+  the ten positions kept for display. From the eleventh sighting on, each such
+  duplicate counted again: fifteen of those rules reported twenty.
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is

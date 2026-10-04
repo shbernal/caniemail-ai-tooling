@@ -127,16 +127,18 @@ class Sightings {
 
     let hit = this.#hits.get(title);
     if (!hit) {
-      hit = { ranges: [], count: 0 };
+      hit = { ranges: [], seen: new Set() };
       this.#hits.set(title, hit);
     }
 
     // One construct can satisfy the same matcher twice — `background:
     // url(a.png), url(b.png)` raises the PNG title once per URL over a single
-    // declaration — so an identical range is one sighting, not two.
-    if (hit.ranges.some((range) => range.start === start && range.end === end)) return;
-
-    hit.count += 1;
+    // declaration — so an identical range is one sighting, not two. Checked
+    // against every range seen rather than the ten kept, or a duplicate of a
+    // sighting the cap had already dropped would be counted again.
+    const key = `${start}-${end}`;
+    if (hit.seen.has(key)) return;
+    hit.seen.add(key);
 
     // Kept sorted by offset, because sightings do not arrive in document order:
     // `detectHtml` walks every element before it descends into any `<style>`
@@ -152,13 +154,13 @@ class Sightings {
   /** @returns {Map<string, {title: string, positions: string[], occurrence_count: number}>} */
   resolve() {
     const out = new Map();
-    for (const [title, { ranges, count }] of this.#hits) {
+    for (const [title, { ranges, seen }] of this.#hits) {
       out.set(title, {
         title,
         positions: ranges.map((range) =>
           formatPosition({ start: this.index.locate(range.start), end: this.index.locate(range.end) }),
         ),
-        occurrence_count: count,
+        occurrence_count: seen.size,
       });
     }
     return out;
