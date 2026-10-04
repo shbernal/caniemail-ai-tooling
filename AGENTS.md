@@ -249,6 +249,10 @@ The pieces:
   expressible in markup). If that count moves, a convention has gone stale.
 
 Cost is ~1ms for a realistic email, against ~59ms for the loop it replaced.
+Neither surface bounds input size, so both scanners have to stay linear in it.
+A forward search that can run to the end of the document must not run once per
+statement or once per element. Timing tests in the scanner suites hold the two
+places that once did.
 
 ### The differential suite
 

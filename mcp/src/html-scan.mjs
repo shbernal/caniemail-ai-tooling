@@ -264,17 +264,27 @@ function readAttributes(source, from) {
   return { attributes, selfClosing: false, tagEnd: length - 1 };
 }
 
+/**
+ * The closing-tag pattern for each raw-text element: `</style` and the like,
+ * any case, followed by whitespace, `>`, `/` or the end of the document.
+ *
+ * A case-insensitive search rather than an `indexOf` on a lowercased copy. The
+ * copy cost a full pass over the document per raw-text element, which is
+ * quadratic in a template with hundreds of `<style>` blocks, and lowercasing
+ * can change a string's length (`İ` becomes two code units), so offsets found
+ * in the copy did not always point into the source.
+ */
+const RAW_TEXT_CLOSE = new Map(
+  [...RAW_TEXT_ELEMENTS].map((tagName) => [
+    tagName,
+    new RegExp(`</${tagName}(?=[ \\t\\n\\r\\f>/]|$)`, 'gi'),
+  ]),
+);
+
 /** Offset of the `</tagName` that ends a raw-text element, or -1. */
 function findRawTextClose(source, tagName, from) {
-  const needle = `</${tagName}`;
-  const lower = source.toLowerCase();
-  let i = from;
-  while (i < source.length) {
-    const found = lower.indexOf(needle, i);
-    if (found === -1) return -1;
-    const after = source[found + needle.length];
-    if (after === undefined || WHITESPACE.has(after) || after === '>' || after === '/') return found;
-    i = found + needle.length;
-  }
-  return -1;
+  const pattern = RAW_TEXT_CLOSE.get(tagName);
+  pattern.lastIndex = from;
+  const found = pattern.exec(source);
+  return found === null ? -1 : found.index;
 }

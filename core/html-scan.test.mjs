@@ -169,3 +169,22 @@ test('scanning never throws, whatever the input', () => {
     assert.doesNotThrow(() => scanHtml(html), `threw on ${JSON.stringify(html)}`);
   }
 });
+
+test('raw-text closing tags are found case-insensitively at their real offset', () => {
+  // `İ` lowercases to two code units, so a search in a lowercased copy of the
+  // document lands one character late.
+  const html = 'İ<STYLE>a{}</Style>';
+  const { styleBlocks, elements } = scanHtml(html);
+  assert.equal(html.slice(styleBlocks[0].textStart, styleBlocks[0].textEnd), 'a{}');
+  assert.equal(elements[0].end, html.length - 1);
+});
+
+test('many raw-text elements in a large document scan in linear time', () => {
+  // The document was lowercased once per raw-text element: quadratic in an
+  // Outlook-conditional template with hundreds of `<style>` blocks.
+  const blocks = '<style>a{}</style>'.repeat(2000);
+  const html = blocks + 'x'.repeat(520_000 - blocks.length);
+  const started = performance.now();
+  scanHtml(html);
+  assert.ok(performance.now() - started < 100);
+});

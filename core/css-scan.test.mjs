@@ -213,3 +213,11 @@ test('splitTopLevel respects strings, groups and brackets', () => {
   assert.deepEqual(splitTopLevel(':not(.a, .b)', ','), [':not(.a, .b)']);
   assert.deepEqual(splitTopLevel('[title="a,b"]', ','), ['[title="a,b"]']);
 });
+
+test('a long run of statements with no `{` after it scans in linear time', () => {
+  // Each statement used to search to the end of the document for a `{`, so
+  // 25 KB of `;` took six seconds. A truncated stylesheet is the ordinary case.
+  const started = performance.now();
+  scanCss(';'.repeat(50000));
+  assert.ok(performance.now() - started < 100);
+});

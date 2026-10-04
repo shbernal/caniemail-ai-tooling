@@ -12,6 +12,20 @@
   changing, not the implementation. On Node 22 the MCP server still runs and npm
   will now warn about it.
 
+- Both scanners are linear in their input again. The CSS scanner searched to
+  the end of the document for a `{` once per statement, so a long run of
+  statements with nothing after it, which is the tail of every truncated
+  stylesheet, cost the square of its length: 25 KB of `;` took six seconds in
+  `lint_email`. The HTML scanner lowercased the whole document once per
+  `<style>`, `<script>`, `<title>`, `<textarea>` or `<xmp>`, which a template
+  with a few hundred conditional style blocks pays for at every one.
+
+  The HTML fix also corrects positions after a character whose lowercase form
+  is longer than itself. `İ` lowercases to two code units, so a raw-text closing
+  tag found in the lowercased copy was reported one character late for every
+  such character before it, and the `<style>` block's CSS was measured from the
+  wrong place.
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is

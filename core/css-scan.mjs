@@ -174,10 +174,10 @@ function parseStatements(source, from, limit, out, declarationSink, inKeyframes)
  * is what lets declarations and nested rules coexist inside one block.
  */
 function startsRule(source, from, limit) {
-  const brace = scanForward(source, from, limit, '{');
-  if (brace === -1) return false;
-  const terminator = scanForward(source, from, limit, ';}');
-  return terminator === -1 || brace < terminator;
+  // One scan for whichever comes first. Searching for `{` on its own runs to
+  // the end of the document when there is none, once per statement.
+  const stop = scanForward(source, from, limit, '{;}');
+  return stop !== -1 && source[stop] === '{';
 }
 
 function parseRule(source, from, limit, out, inKeyframes) {
