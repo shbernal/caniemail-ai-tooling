@@ -144,6 +144,19 @@ test('an escaped character is part of the identifier, not syntax', () => {
   assert.deepEqual(shapesOf(':is("x) > y")'), []);
 });
 
+test('a hex escape takes the whitespace that ends it', () => {
+  // `.\31 0` is the class `10`. Read as a two-character escape it was `.\3`,
+  // `1`, then a descendant combinator before `0`.
+  assert.deepEqual(shapesOf('.\\31 0'), [CLASS]);
+  assert.deepEqual(shapesOf('.\\000031 0'), [CLASS]);
+  assert.deepEqual(shapesOf('.\\31\r\n0'), [CLASS]);
+  // Six digits is the limit, so a seventh is part of the name.
+  assert.deepEqual(shapesOf('.\\0000310 p'), [CLASS, DESCENDANT, TYPE]);
+  // Past the optional whitespace, a second space is a combinator again.
+  assert.deepEqual(shapesOf('.\\31  p'), [CLASS, DESCENDANT, TYPE]);
+  assert.deepEqual(shapesOf('.\\g p'), [CLASS, DESCENDANT, TYPE]);
+});
+
 test('a truncated attribute or pseudo argument runs to the end, quietly', () => {
   assert.deepEqual(shapesOf('[title="unterminated > x'), [ATTRIBUTE]);
   // A `]` inside the quotes does not close the attribute selector.

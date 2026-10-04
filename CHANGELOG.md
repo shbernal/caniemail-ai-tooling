@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- A CSS hex escape in a selector now takes the whitespace that ends it, as CSS
+  defines. `.\31 0` is the class `10`; it was read as `.\3`, `1` and a
+  descendant combinator before `0`, so `lint_email` reported a descendant
+  combinator the stylesheet does not use.
+
 - A `/*` inside a CSS string or after a backslash is no longer stripped as a
   comment. `content: "/* x */"` read as `""`, and the selector `.a\/*b` lost
   everything from the `/*` on, while the same scan's comment list correctly

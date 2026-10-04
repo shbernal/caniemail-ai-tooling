@@ -195,13 +195,31 @@ function readIdentifier(text, from) {
   let i = from;
   while (i < text.length) {
     if (text[i] === '\\') {
-      i += 2;
+      i = escapeEnd(text, i);
       continue;
     }
     if (!isIdentifierChar(text[i])) break;
     i += 1;
   }
   return i;
+}
+
+/**
+ * One past the escape starting at the backslash at `from`.
+ *
+ * A hex escape is up to six hex digits and then one optional whitespace, which
+ * belongs to the escape: `.\\31 0` is the class `10`, not a class `1` with a
+ * descendant `0`. Any other escape is the backslash and one character. Only
+ * identifiers need this; everywhere else an escape is stepped over inside a
+ * string, group or bracket where the whitespace after it is not syntax.
+ */
+function escapeEnd(text, from) {
+  let i = from + 1;
+  const digitsEnd = Math.min(i + 6, text.length);
+  while (i < digitsEnd && /[0-9a-f]/i.test(text[i])) i += 1;
+  if (i === from + 1) return from + 2;
+  if (text[i] === '\r' && text[i + 1] === '\n') return i + 2;
+  return isWhitespace(text[i] ?? '') ? i + 1 : i;
 }
 
 function isIdentifierChar(char) {
