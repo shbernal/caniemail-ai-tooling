@@ -1,0 +1,7 @@
+# Commits that only reformat, skipped by `git blame` so a line still points at
+# the change that gave it its meaning. GitHub reads this file on its own; locally:
+#
+#     git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Format the code with oxfmt
+2ac57eb5928568745e9530f603900087251fb656

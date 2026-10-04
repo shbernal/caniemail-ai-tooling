@@ -56,6 +56,9 @@ jobs:
       - name: Lint
         run: make lint
 
+      - name: Check formatting
+        run: make check-format
+
       # Includes the differential suite, which also pins detection output
       # against core/fixtures/expected.
       - name: Run the core suite

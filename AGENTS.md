@@ -107,6 +107,8 @@ make test-network   # adds the live-fetch test
 make sync-core      # copy the core into both surfaces, after any core edit
 make check-vendor   # verify the vendored copies match
 make lint           # oxlint over the core and both adapters, not the copies
+make format         # oxfmt over the same paths, then sync-core
+make check-format   # fail on anything make format would change
 make goldens        # regenerate fixtures/expected after an intended change
 make refresh-data   # refetch the dataset snapshot
 make smoke          # drive the MCP server over real stdio JSON-RPC
@@ -114,12 +116,15 @@ make smoke          # drive the MCP server over real stdio JSON-RPC
 
 Run `make sync-core test check-vendor` before committing any core change.
 
-`make test`, `make check-vendor` and `make lint` also run as a lefthook
-`pre-commit` hook, so a forgotten `make sync-core` fails the commit rather than
-reaching a surface. Install the hooks once per clone with `pnpm install && pnpm
-exec lefthook install`; the same three gates run again in CI. `make sync-core` is deliberately
-*not* automated. Vendoring is a decision to record in the commit, not a side
-effect of it.
+`make test`, `make check-vendor`, `make lint` and `make check-format` also run
+as a lefthook `pre-commit` hook, so a forgotten `make sync-core` fails the commit
+rather than reaching a surface. Install the hooks once per clone with `pnpm
+install && pnpm exec lefthook install`; the same four gates run again in CI.
+The hook checks formatting and never rewrites the tree: like `make sync-core`,
+which is deliberately *not* automated, a change to what is committed is a
+decision to record in the commit, not a side effect of it. `make format` is the
+one target that does both, because a formatted core with stale copies would
+fail `check-vendor` straight away.
 
 `make smoke` needs `mcp/node_modules`, which the root `pnpm install` provides.
 It tests the transport and tool registrations, which the core suite does not
