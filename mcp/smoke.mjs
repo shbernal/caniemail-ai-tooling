@@ -107,6 +107,19 @@ try {
     payload(search).results[0].slug,
   );
 
+  // The schema describes the categories rather than enumerating them, so an
+  // unknown one has to come back from the core as a tool error naming the set.
+  const badCategory = await request('tools/call', {
+    name: 'search_features',
+    arguments: { query: 'flex', category: 'nonsense' },
+  });
+  check(
+    'an unknown category is a tool error that lists the real ones',
+    badCategory.result.isError === true &&
+      /Use one of: .*css/.test(badCategory.result.content[0].text),
+    badCategory.result.content[0].text,
+  );
+
   const support = await request('tools/call', {
     name: 'check_feature_support',
     arguments: { feature: 'css-border-radius', clients: ['outlook.windows'] },

@@ -66,7 +66,13 @@ const getDataset = revalidatingDataset(REVALIDATE_MS, { offline });
  * descriptions catch up on the next restart while the *data* is already current
  * from the first tool call.
  */
-const CLIENT_ROSTER = (await loadDataset({ offline: true })).clients.join(', ');
+const SNAPSHOT = await loadDataset({ offline: true });
+const CLIENT_ROSTER = SNAPSHOT.clients.join(', ');
+
+// Listed for the same reason and from the same place, but described rather than
+// enforced: a `z.enum` would reject a category added upstream before the core,
+// which validates against the live data, ever saw it.
+const CATEGORIES = [...new Set(SNAPSHOT.features.map((feature) => feature.category))].sort();
 
 const CLIENT_ARG = z
   .array(z.string())
@@ -183,9 +189,9 @@ server.registerTool(
     inputSchema: {
       query: z.string().describe('Keywords, e.g. "flexbox", "dark mode", "rounded corners".'),
       category: z
-        .enum(['html', 'css', 'image', 'others'])
+        .string()
         .optional()
-        .describe('Restrict to one category.'),
+        .describe(`Restrict to one category: ${CATEGORIES.join(', ')}.`),
       limit: z.number().int().positive().optional().describe('Max results. Default 15.'),
     },
   },

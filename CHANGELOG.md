@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `search_features` on the MCP server no longer rejects a category its schema
+  did not know. The schema froze `html`, `css`, `image` and `others`, so a
+  category added upstream failed validation before the core, which checks
+  against the live data, could accept it. The schema now lists the categories
+  in its description, and an unknown one comes back as a tool error naming the
+  valid set.
+
 - A CSS hex escape in a selector now takes the whitespace that ends it, as CSS
   defines. `.\31 0` is the class `10`; it was read as `.\3`, `1` and a
   descendant combinator before `0`, so `lint_email` reported a descendant
