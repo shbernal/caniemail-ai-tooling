@@ -146,13 +146,10 @@ test('a malformed declaration does not take the rest of the rule with it', () =>
 });
 
 test('an unclosed block still yields what it contained', () => {
-  const scan = scanCss('@media (max-width: 600px) { .a { display: flex;');
+  const css = '@media (max-width: 600px) { .a { display: flex;';
+  assert.deepEqual(declarationsIn(css), ['display:flex']);
   assert.deepEqual(
-    declarationsIn(scan.rules.length ? '@media (max-width: 600px) { .a { display: flex;' : ''),
-    ['display:flex'],
-  );
-  assert.deepEqual(
-    scan.atRules.map((rule) => rule.name),
+    scanCss(css).atRules.map((rule) => rule.name),
     ['media'],
   );
 });
