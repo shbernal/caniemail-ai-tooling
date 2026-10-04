@@ -253,6 +253,22 @@ test('image formats are read from a data URI mime type', () => {
   assert.equal(matchImageUrl(tables, 'data:text/plain,hello'), undefined);
 });
 
+test('a key that names something on Object.prototype matches nothing', () => {
+  // The tables were object literals, so `constructor` found a function.
+  assert.equal(matchImageUrl(tables, 'hero.constructor'), undefined);
+  assert.equal(matchImageUrl(tables, 'data:constructor,x'), undefined);
+
+  // A dataset title spelled that way would have built a table that throws.
+  const odd = buildTitleTables([
+    { title: 'toString', category: 'css' },
+    { title: 'constructor', category: 'html' },
+    { title: 'color property', category: 'css' },
+    { title: '<video> element', category: 'html' },
+  ]);
+  assert.deepEqual(matchProperty(odd, 'color'), ['color property']);
+  assert.deepEqual(matchElement(odd, 'video'), ['<video> element']);
+});
+
 test('urls are pulled out of srcset and url()', () => {
   assert.deepEqual(urlsFromSrcset('small.png 1x, large.webp 2x'), ['small.png', 'large.webp']);
   assert.deepEqual(urlsFromCssValue('url(a.png)'), ['a.png']);
@@ -285,8 +301,8 @@ test('the tables reach all but the four features markup cannot express', () => {
   add(tables.attributes);
   add(tables.elementAttributes);
   for (const title of tables.selectorShapes) reachable.add(title);
-  for (const title of Object.values(tables.imageExtensions)) reachable.add(title);
-  for (const title of Object.values(tables.imageMimes)) reachable.add(title);
+  for (const title of tables.imageExtensions.values()) reachable.add(title);
+  for (const title of tables.imageMimes.values()) reachable.add(title);
   for (const title of ['CSS comments', 'CSS Nesting', 'HTML comments', 'HTML5 doctype']) {
     reachable.add(title);
   }

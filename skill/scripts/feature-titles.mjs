@@ -22,13 +22,19 @@
 /* Hardcoded shape exceptions                                                  */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * The lookup tables below are Maps rather than object literals because their
+ * keys come from dataset titles and from URLs in the email. On a plain object
+ * `constructor` or `toString` finds a function on `Object.prototype`.
+ */
+
 /**
  * CSS titles that name several properties instead of one.
  *
  * Every entry exists because the title is prose ("border-inline & border-block")
  * rather than a property name, so `/^[a-z-]+$/` cannot recover it.
  */
-const PROPERTY_TITLE_EXCEPTIONS = {
+const PROPERTY_TITLE_EXCEPTIONS = new Map(Object.entries({
   'block-size & inline-size': ['block-size', 'inline-size'],
   'border-inline & border-block': ['border-inline', 'border-block'],
   'border-inline & border-block individual logical properties': [
@@ -78,7 +84,7 @@ const PROPERTY_TITLE_EXCEPTIONS = {
   'padding-block-start & padding-block-end': ['padding-block-end', 'padding-block-start'],
   'padding-inline & padding-block': ['padding-block', 'padding-inline'],
   'padding-inline-start & padding-inline-end': ['padding-inline-end', 'padding-inline-start'],
-};
+}));
 
 /**
  * CSS titles that name a set of *values* rather than a property or a pair.
@@ -98,7 +104,7 @@ const VALUE_TITLE_EXCEPTIONS = {
 /**
  * HTML titles that name elements the `/<(\w+)>/` convention cannot recover.
  */
-const ELEMENT_TITLE_EXCEPTIONS = {
+const ELEMENT_TITLE_EXCEPTIONS = new Map(Object.entries({
   // Bare word, no angle brackets.
   address: ['address'],
   // A range, not a list: the convention would recover h1 and h6 and drop h2-h5.
@@ -125,21 +131,21 @@ const ELEMENT_TITLE_EXCEPTIONS = {
   'Image maps': ['map'],
   // The <svg> in the title is context; the element measured is SVG's <image>.
   'Embedded <svg> image': ['image'],
-};
+}));
 
 /**
  * HTML titles that pair an element with an attribute, where the pairing is not
  * spelled `<el attr="value">`.
  */
-const ELEMENT_ATTRIBUTE_TITLE_EXCEPTIONS = {
+const ELEMENT_ATTRIBUTE_TITLE_EXCEPTIONS = new Map(Object.entries({
   'Local anchors': { element: 'a', matchers: [['href', /^#/], ['name', null]] },
   'mailto: links': { element: 'a', matchers: [['href', /^mailto:/i]] },
   'color-scheme meta tag': { element: 'meta', matchers: [['name', 'color-scheme']] },
   'AMP for Email': { element: 'html', matchers: [['⚡4email', null], ['amp4email', null]] },
-};
+}));
 
 /** File extension -> image feature title. */
-const IMAGE_EXTENSION_TITLES = {
+const IMAGE_EXTENSION_TITLES = new Map(Object.entries({
   apng: 'Animated PNG image format',
   avif: 'AVIF image format',
   bmp: 'BMP image format',
@@ -154,10 +160,10 @@ const IMAGE_EXTENSION_TITLES = {
   tif: 'TIFF image format',
   tiff: 'TIFF image format',
   webp: 'webP image format',
-};
+}));
 
 /** data: URI MIME type -> image feature title. */
-const IMAGE_MIME_TITLES = {
+const IMAGE_MIME_TITLES = new Map(Object.entries({
   'image/apng': 'Animated PNG image format',
   'image/avif': 'AVIF image format',
   'image/bmp': 'BMP image format',
@@ -171,7 +177,7 @@ const IMAGE_MIME_TITLES = {
   'image/tiff': 'TIFF image format',
   'image/vnd.microsoft.icon': 'ICO image format',
   'image/webp': 'webP image format',
-};
+}));
 
 /** Titles that name a selector shape rather than anything textual. */
 export const SELECTOR_SHAPE_TITLES = [
@@ -269,7 +275,7 @@ function createTables(features) {
 
     // "height property" / "font shorthand" / "inline-size " -> one property.
     properties: css.flatMap((title) => {
-      const exception = PROPERTY_TITLE_EXCEPTIONS[title];
+      const exception = PROPERTY_TITLE_EXCEPTIONS.get(title);
       if (exception) return [{ title, names: exception }];
       const trimmed = title.trim().replace(/ shorthand$/, '').replace(/ property$/, '');
       return PROPERTY_NAME.test(trimmed) ? [{ title, names: [trimmed] }] : [];
@@ -295,7 +301,7 @@ function createTables(features) {
 
     // "<video> element" -> "video"; "<ul>, <ol> and <dl>" -> all three.
     elements: html.flatMap((title) => {
-      const exception = ELEMENT_TITLE_EXCEPTIONS[title];
+      const exception = ELEMENT_TITLE_EXCEPTIONS.get(title);
       if (exception) return exception.length > 0 ? [{ title, names: exception }] : [];
       const names = [...title.matchAll(/<(\w+)>/g)].map((m) => m[1].toLowerCase());
       return names.length > 0 ? [{ title, names }] : [];
@@ -318,7 +324,7 @@ function createTables(features) {
 
     // '<input type="text"> element' -> element "input", attribute type="text".
     elementAttributes: html.flatMap((title) => {
-      const exception = ELEMENT_ATTRIBUTE_TITLE_EXCEPTIONS[title];
+      const exception = ELEMENT_ATTRIBUTE_TITLE_EXCEPTIONS.get(title);
       if (exception) return [{ title, ...exception }];
       const match = /<(\w+) ([\w-]+)="([^"]+)"> element/.exec(title);
       if (!match) return [];
@@ -335,7 +341,7 @@ function createTables(features) {
 }
 
 function filterToKnown(map, known) {
-  return Object.fromEntries(Object.entries(map).filter(([, title]) => known.has(title)));
+  return new Map([...map].filter(([, title]) => known.has(title)));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -487,10 +493,10 @@ export function matchElementAttributes(tables, tagName, attributes) {
 export function matchImageUrl(tables, url) {
   const trimmed = String(url).trim();
   const mime = /^data:([^;,]+)/i.exec(trimmed)?.[1]?.toLowerCase();
-  if (mime) return tables.imageMimes[mime];
+  if (mime) return tables.imageMimes.get(mime);
   const path = trimmed.split(/[?#]/, 1)[0];
   const extension = /\.([a-z0-9]+)$/i.exec(path)?.[1]?.toLowerCase();
-  return extension ? tables.imageExtensions[extension] : undefined;
+  return extension ? tables.imageExtensions.get(extension) : undefined;
 }
 
 /** The candidate URLs in a `srcset` attribute. */
