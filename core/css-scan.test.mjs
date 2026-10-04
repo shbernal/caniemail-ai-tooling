@@ -162,10 +162,23 @@ test('scanning never throws, whatever the input', () => {
     ';;;;',
     '.a {;;}',
     '@',
+    // Blocks recurse; enough of them used to overflow the stack.
+    'a{'.repeat(100000),
+    '@media{'.repeat(100000),
+    'a{'.repeat(100000) + '}'.repeat(100000),
   ];
   for (const css of nasty) {
-    assert.doesNotThrow(() => scanCss(css), `threw on ${JSON.stringify(css)}`);
+    assert.doesNotThrow(() => scanCss(css), `threw on ${JSON.stringify(css.slice(0, 40))}`);
   }
+});
+
+test('a block nested past the depth limit is stepped over, not the stylesheet', () => {
+  const deep = 'a{'.repeat(100) + 'color:red' + '}'.repeat(100);
+  const scan = scanCss(`${deep} .b { float: left }`);
+  assert.deepEqual(scan.rules.at(-1).selectors, ['.b']);
+  assert.deepEqual(declarationsIn(`${deep} .b { float: left }`).at(-1), 'float:left');
+  // Shallow nesting is still read all the way down.
+  assert.deepEqual(declarationsIn('a{'.repeat(10) + 'color:red' + '}'.repeat(10)), ['color:red']);
 });
 
 test('style attributes parse as a bare declaration list', () => {

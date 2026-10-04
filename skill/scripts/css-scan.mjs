@@ -27,6 +27,14 @@ const COMMENT_PATTERN = /\/\*[^]*?(?:\*\/|$)/g;
 const PROPERTY_CHAR = /[*#/\\\w-]/;
 
 /**
+ * How many blocks deep the scanner descends. Blocks recurse, one stack frame
+ * per `{`, and a few thousand unclosed braces would otherwise overflow the
+ * stack. Real stylesheets nest a handful deep; past this a block is stepped
+ * over whole, the way a malformed declaration is.
+ */
+const MAX_DEPTH = 64;
+
+/**
  * @typedef {object} ScannedDeclaration
  * @property {string} property
  * @property {string} value
@@ -58,7 +66,7 @@ const PROPERTY_CHAR = /[*#/\\\w-]/;
  */
 export function scanCss(source) {
   const out = { rules: [], declarations: [], atRules: [], comments: collectComments(source) };
-  parseStatements(source, 0, source.length, out, out.declarations, false);
+  parseStatements(source, 0, source.length, out, out.declarations, false, 0);
   return out;
 }
 
@@ -113,9 +121,10 @@ export function scanStyleAttribute(text) {
  * @param {boolean} inKeyframes Suppresses rule records: `from`/`to`/`50%` are
  *   keyframe selectors, not CSS selectors, and reporting `from` as a type
  *   selector would be a pure false positive.
+ * @param {number} depth How many blocks enclose this one.
  * @returns {number} Offset of the `}` that ended the block, or `limit`.
  */
-function parseStatements(source, from, limit, out, declarationSink, inKeyframes) {
+function parseStatements(source, from, limit, out, declarationSink, inKeyframes, depth) {
   let i = from;
 
   while (i < limit) {
@@ -132,7 +141,7 @@ function parseStatements(source, from, limit, out, declarationSink, inKeyframes)
     }
 
     if (char === '@') {
-      const next = parseAtRule(source, i, limit, out, inKeyframes);
+      const next = parseAtRule(source, i, limit, out, inKeyframes, depth);
       if (next > i) {
         i = next;
         continue;
@@ -140,7 +149,7 @@ function parseStatements(source, from, limit, out, declarationSink, inKeyframes)
     }
 
     if (startsRule(source, i, limit)) {
-      const next = parseRule(source, i, limit, out, inKeyframes);
+      const next = parseRule(source, i, limit, out, inKeyframes, depth);
       if (next > i) {
         i = next;
         continue;
@@ -180,7 +189,7 @@ function startsRule(source, from, limit) {
   return stop !== -1 && source[stop] === '{';
 }
 
-function parseRule(source, from, limit, out, inKeyframes) {
+function parseRule(source, from, limit, out, inKeyframes, depth) {
   const brace = scanForward(source, from, limit, '{');
   if (brace === -1) return from;
 
@@ -189,8 +198,13 @@ function parseRule(source, from, limit, out, inKeyframes) {
     .filter(Boolean);
 
   const declarations = [];
-  const closing = parseStatements(source, brace + 1, limit, out, declarations, inKeyframes);
-  const end = source[closing] === '}' ? closing + 1 : closing;
+  let end;
+  if (depth >= MAX_DEPTH) {
+    end = skipNested(source, brace, limit, '{', '}');
+  } else {
+    const closing = parseStatements(source, brace + 1, limit, out, declarations, inKeyframes, depth + 1);
+    end = blockEnd(source, closing);
+  }
 
   if (inKeyframes) {
     // Keep the declarations, drop the selector: a keyframe stop is not a
@@ -202,7 +216,7 @@ function parseRule(source, from, limit, out, inKeyframes) {
   return end;
 }
 
-function parseAtRule(source, from, limit, out, inKeyframes) {
+function parseAtRule(source, from, limit, out, inKeyframes, depth) {
   let i = from + 1;
   const nameStart = i;
   while (i < limit && /[-\w]/.test(source[i])) i += 1;
@@ -217,7 +231,9 @@ function parseAtRule(source, from, limit, out, inKeyframes) {
   const prelude = stripComments(source.slice(i, preludeEnd)).trim();
 
   let end;
-  if (stop !== -1 && source[stop] === '{') {
+  if (stop !== -1 && source[stop] === '{' && depth >= MAX_DEPTH) {
+    end = skipNested(source, stop, limit, '{', '}');
+  } else if (stop !== -1 && source[stop] === '{') {
     // `@font-face`, `@page` and friends hold declarations directly; `@media`
     // and `@supports` hold rules. Both are handled by the same loop.
     const closing = parseStatements(
@@ -227,8 +243,9 @@ function parseAtRule(source, from, limit, out, inKeyframes) {
       out,
       out.declarations,
       inKeyframes || name === 'keyframes',
+      depth + 1,
     );
-    end = source[closing] === '}' ? closing + 1 : closing;
+    end = blockEnd(source, closing);
   } else if (stop !== -1) {
     end = stop + 1;
   } else {
@@ -237,6 +254,11 @@ function parseAtRule(source, from, limit, out, inKeyframes) {
 
   out.atRules.push({ name, prelude, start: from, end });
   return end;
+}
+
+/** One past a block's closing `}`, or `limit` when the block never closed. */
+function blockEnd(source, closing) {
+  return source[closing] === '}' ? closing + 1 : closing;
 }
 
 /** Parse declarations until `}` or `limit`, with no rule or at-rule handling. */

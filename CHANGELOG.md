@@ -32,6 +32,12 @@
   server is single-threaded, so every session on it waited. A run of stars now
   counts as one, which matches exactly the same clients.
 
+- Deeply nested braces no longer make `lint_email` fail. The CSS scanner
+  recursed once per `{`, so about 6 KB of unclosed `a{` overflowed the stack and
+  the caller got "Maximum call stack size exceeded" as the answer about their
+  email. The scanner now stops descending 64 blocks deep and steps over
+  anything deeper as one unit, then carries on with the rest of the stylesheet.
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is

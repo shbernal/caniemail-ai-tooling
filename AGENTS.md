@@ -238,7 +238,10 @@ The pieces:
   interleaving them would produce line numbers pointing into neither.
 - Both scanners are **tolerant and never throw.** This is not defensive coding.
   Email markup is routinely unclosed, unquoted and truncated, and one malformed
-  `style` attribute used to void the entire lint.
+  `style` attribute used to void the entire lint. Braces are the one construct
+  the CSS scanner recurses on, so it stops descending 64 blocks deep and steps
+  over anything deeper whole; everything else in both scanners is iterative.
+  Keep it that way rather than catching a `RangeError` upstream.
 - Titles are matched from `feature-titles.mjs`, which derives its tables from
   dataset titles **by convention** (`title.endsWith(' unit')`, `/<(\w+)>/`, and
   so on) rather than freezing a list, so a feature added upstream is picked up
