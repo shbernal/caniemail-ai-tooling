@@ -125,10 +125,14 @@ try {
     },
   });
   const findings = payload(lint).findings;
-  check('lint_email flags display:flex', findings.some((f) => f.feature === 'css-display-flex'));
+  check(
+    'lint_email flags display:flex',
+    findings.some((f) => f.feature === 'css-display-flex'),
+  );
   check(
     'lint_email keeps untested distinct from mitigated',
-    findings.some((f) => f.verdict === 'untested') || findings.every((f) => f.verdict !== 'untested'),
+    findings.some((f) => f.verdict === 'untested') ||
+      findings.every((f) => f.verdict !== 'untested'),
     `${new Set(findings.map((f) => f.verdict)).size} distinct verdicts`,
   );
   check('lint_email survives the "*" glob', payload(lint).clients_checked.length === 48);

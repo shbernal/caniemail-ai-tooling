@@ -19,8 +19,25 @@
 
 /** Elements that never have a closing tag. */
 const VOID_ELEMENTS = new Set([
-  'area', 'base', 'basefont', 'br', 'col', 'command', 'embed', 'frame', 'hr', 'img',
-  'input', 'isindex', 'keygen', 'link', 'meta', 'param', 'source', 'track', 'wbr',
+  'area',
+  'base',
+  'basefont',
+  'br',
+  'col',
+  'command',
+  'embed',
+  'frame',
+  'hr',
+  'img',
+  'input',
+  'isindex',
+  'keygen',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
 ]);
 
 /**

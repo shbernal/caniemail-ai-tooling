@@ -68,7 +68,9 @@ const lines = [];
 
 lines.push('| | before | after |');
 lines.push('|---|---|---|');
-lines.push(`| \`last_update_date\` | \`${before.last_update_date}\` | \`${after.last_update_date}\` |`);
+lines.push(
+  `| \`last_update_date\` | \`${before.last_update_date}\` | \`${after.last_update_date}\` |`,
+);
 lines.push(`| features | ${beforeFeatures.size} | ${afterFeatures.size} |`);
 lines.push('');
 lines.push(`**Added** (${added.length}): ${list(added)}`);

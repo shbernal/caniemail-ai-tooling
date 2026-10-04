@@ -123,9 +123,11 @@ test('at-rules match by name, and media features by prelude', () => {
     '@media (prefers-color-scheme)',
   ]);
   assert.deepEqual(matchAtRule(tables, 'media', 'screen and (max-width: 600px)'), ['@media']);
-  assert.ok(matchAtRule(tables, 'media', '(any-hover: hover)').includes(
-    '@media (hover), @media (any-hover)',
-  ));
+  assert.ok(
+    matchAtRule(tables, 'media', '(any-hover: hover)').includes(
+      '@media (hover), @media (any-hover)',
+    ),
+  );
 });
 
 test('pseudo-classes and pseudo-elements match by name', () => {
@@ -177,8 +179,7 @@ test('attributes match by name', () => {
 test('a title naming several attributes yields each of them', () => {
   // Built from a synthetic dataset rather than the snapshot: this is the
   // convention that has to hold for a title upstream has not written yet.
-  const attributes = (title) =>
-    buildTitleTables([{ title, category: 'html' }]).attributes;
+  const attributes = (title) => buildTitleTables([{ title, category: 'html' }]).attributes;
 
   assert.deepEqual(attributes('command and commandfor attributes'), [
     { title: 'command and commandfor attributes', names: ['command', 'commandfor'] },
@@ -228,10 +229,9 @@ test('AMP is declared by either spelling of its attribute', () => {
 });
 
 test('attribute value comparisons are case-insensitive, as HTML is', () => {
-  assert.deepEqual(
-    matchElementAttributes(tables, 'input', new Map([['type', 'CHECKBOX']])),
-    ['<input type="checkbox"> element'],
-  );
+  assert.deepEqual(matchElementAttributes(tables, 'input', new Map([['type', 'CHECKBOX']])), [
+    '<input type="checkbox"> element',
+  ]);
 });
 
 /* -------------------------------------------------------------------------- */

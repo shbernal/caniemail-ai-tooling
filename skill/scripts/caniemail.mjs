@@ -74,7 +74,10 @@ function clientsFrom(flags) {
   if (!flags.clients) {
     throw new Error('--clients is required, e.g. --clients outlook.windows,gmail.*');
   }
-  return flags.clients.split(',').map((c) => c.trim()).filter(Boolean);
+  return flags.clients
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean);
 }
 
 async function readStdin() {
@@ -146,7 +149,11 @@ async function main() {
     }
 
     case 'clients': {
-      print({ clients: listClients(dataset), count: dataset.clients.length, data_source: dataset.meta });
+      print({
+        clients: listClients(dataset),
+        count: dataset.clients.length,
+        data_source: dataset.meta,
+      });
       return;
     }
 

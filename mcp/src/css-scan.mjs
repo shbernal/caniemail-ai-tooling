@@ -207,7 +207,15 @@ function parseRule(source, from, limit, out, inKeyframes, depth) {
   if (depth >= MAX_DEPTH) {
     end = skipNested(source, brace, limit, '{', '}');
   } else {
-    const closing = parseStatements(source, brace + 1, limit, out, declarations, inKeyframes, depth + 1);
+    const closing = parseStatements(
+      source,
+      brace + 1,
+      limit,
+      out,
+      declarations,
+      inKeyframes,
+      depth + 1,
+    );
     end = blockEnd(source, closing);
   }
 
@@ -229,7 +237,10 @@ function parseAtRule(source, from, limit, out, inKeyframes, depth) {
 
   // `@-webkit-keyframes` is `@keyframes`. Vendor prefixes are noise here: the
   // dataset has no title for a prefixed at-rule.
-  const name = source.slice(nameStart, i).toLowerCase().replace(/^-[a-z]+-/, '');
+  const name = source
+    .slice(nameStart, i)
+    .toLowerCase()
+    .replace(/^-[a-z]+-/, '');
 
   const stop = scanForward(source, i, limit, '{;');
   const preludeEnd = stop === -1 ? limit : stop;

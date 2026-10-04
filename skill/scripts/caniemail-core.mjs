@@ -196,8 +196,13 @@ export async function loadDataset(options = {}) {
           // Misshapen is corrupt. A cache written before this check existed is
           // still on disk, so the guard on the fetch below is not enough on its
           // own to end an ongoing poisoning — this is the line that does.
-          if (!isDatasetShaped(cached.raw)) throw new Error('cached dataset is not shaped like one');
-          return indexDataset(cached.raw, { source: 'cache', fetchedAt: cached.fetchedAt, warning: null });
+          if (!isDatasetShaped(cached.raw))
+            throw new Error('cached dataset is not shaped like one');
+          return indexDataset(cached.raw, {
+            source: 'cache',
+            fetchedAt: cached.fetchedAt,
+            warning: null,
+          });
         }
       }
     } catch {
@@ -623,7 +628,9 @@ function stalenessOf(lastTestDate) {
  */
 export function searchFeatures(dataset, query, options = {}) {
   const { limit = 15, category } = options;
-  const needle = String(query ?? '').trim().toLowerCase();
+  const needle = String(query ?? '')
+    .trim()
+    .toLowerCase();
   if (!needle) throw new Error('A search query is required.');
 
   // Same stance as an unmatched glob: a request that cannot return anything is
@@ -817,9 +824,7 @@ export function lintEmail(dataset, options) {
   // Hard failures first, then breadth of impact — an agent reading top-down
   // fixes the most damaging thing first.
   const order = { error: 0, warning: 1, unknown: 2 };
-  findings.sort(
-    (a, b) => order[a.severity] - order[b.severity] || b.client_count - a.client_count,
-  );
+  findings.sort((a, b) => order[a.severity] - order[b.severity] || b.client_count - a.client_count);
 
   const counts = { error: 0, warning: 0, unknown: 0 };
   for (const finding of findings) counts[finding.severity] += 1;
@@ -899,6 +904,8 @@ const SEVERITY_BY_VERDICT = {
 
 const GUIDANCE_BY_VERDICT = {
   [UNSUPPORTED]: 'Not supported. This will not render as intended; use a fallback.',
-  [MITIGATED]: 'Partial or conditional support. Read the notes — usually workable with a documented workaround.',
-  [UNTESTED]: 'Never tested on these clients. Not evidence of support either way; avoid, or test it yourself.',
+  [MITIGATED]:
+    'Partial or conditional support. Read the notes — usually workable with a documented workaround.',
+  [UNTESTED]:
+    'Never tested on these clients. Not evidence of support either way; avoid, or test it yourself.',
 };

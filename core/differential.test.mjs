@@ -90,7 +90,9 @@ function adjustPosition(position, offset) {
     start: {
       line: position.start.line + offset.line - 1,
       column:
-        position.start.line === 1 ? position.start.column + offset.column - 1 : position.start.column,
+        position.start.line === 1
+          ? position.start.column + offset.column - 1
+          : position.start.column,
     },
     end: {
       line: position.end.line + offset.line - 1,
@@ -117,8 +119,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const before = (a, b) => a.line < b.line || (a.line === b.line && a.column <= b.column);
 
 /** Is `inner` wholly inside `outer`? */
-const contains = (outer, inner) =>
-  before(outer.start, inner.start) && before(inner.end, outer.end);
+const contains = (outer, inner) => before(outer.start, inner.start) && before(inner.end, outer.end);
 
 /**
  * Why does our position differ from upstream's? Null means "no known reason",

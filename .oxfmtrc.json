@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  // The code was already written to a 100-column, single-quoted style by hand;
+  // these two settings are what make adopting the formatter a small diff.
+  // printWidth is oxfmt's default and is named so a change to it is not one.
+  "printWidth": 100,
+  "singleQuote": true,
+  // `make format` names its paths, so these only matter to an editor that
+  // formats on save. The vendored copies follow the core through `make
+  // sync-core`, never by hand; the snapshot and the goldens are generated.
+  "ignorePatterns": [
+    "skill/scripts/**",
+    "!skill/scripts/caniemail.mjs",
+    "mcp/src/**",
+    "!mcp/src/server.mjs",
+    "core/data/**",
+    "core/fixtures/**"
+  ]
+}

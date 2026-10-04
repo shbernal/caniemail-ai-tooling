@@ -74,14 +74,20 @@ test('the style attribute reports where its value starts', () => {
 test('void and self-closing elements end at their own ">"', () => {
   const html = '<img src="x.png"/><br/><hr>';
   const elements = scanHtml(html).elements;
-  assert.deepEqual(elements.map((element) => element.tagName), ['img', 'br', 'hr']);
+  assert.deepEqual(
+    elements.map((element) => element.tagName),
+    ['img', 'br', 'hr'],
+  );
   for (const element of elements) assert.equal(html[element.end], '>');
 });
 
 test('unclosed elements run to the end of the document', () => {
   const html = '<div><p>text';
   const elements = scanHtml(html).elements;
-  assert.deepEqual(elements.map((element) => element.tagName), ['div', 'p']);
+  assert.deepEqual(
+    elements.map((element) => element.tagName),
+    ['div', 'p'],
+  );
   for (const element of elements) assert.equal(element.end, html.length - 1);
 });
 
@@ -117,20 +123,29 @@ test('conditional comments are comments, contents and all', () => {
   const scan = scanHtml(html);
   assert.equal(scan.comments.length, 1);
   assert.equal(html[scan.comments[0].end], '>');
-  assert.deepEqual(scan.elements.map((element) => element.tagName), ['p']);
+  assert.deepEqual(
+    scan.elements.map((element) => element.tagName),
+    ['p'],
+  );
 });
 
 test('the downlevel-revealed conditional leaves its body as real markup', () => {
   // `<!--[if !mso]><!-->` closes, so what follows is markup for everyone else.
   const html = '<!--[if !mso]><!--><div style="color:red">x</div><!--<![endif]-->';
   const scan = scanHtml(html);
-  assert.deepEqual(scan.elements.map((element) => element.tagName), ['div']);
+  assert.deepEqual(
+    scan.elements.map((element) => element.tagName),
+    ['div'],
+  );
   assert.equal(scan.comments.length, 2);
 });
 
 test('an unterminated comment swallows the rest of the document', () => {
   const scan = scanHtml('<p>x</p><!-- never closed <div>');
-  assert.deepEqual(scan.elements.map((element) => element.tagName), ['p']);
+  assert.deepEqual(
+    scan.elements.map((element) => element.tagName),
+    ['p'],
+  );
   assert.equal(scan.comments.length, 1);
 });
 
@@ -200,6 +215,9 @@ test('a character that cannot start an attribute name is stepped over', () => {
   const [div] = scanHtml('<div =x id=a>').elements;
   assert.deepEqual(
     div.attributes.map((attribute) => [attribute.name, attribute.value]),
-    [['x', ''], ['id', 'a']],
+    [
+      ['x', ''],
+      ['id', 'a'],
+    ],
   );
 });

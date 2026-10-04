@@ -48,57 +48,59 @@ import {
  * Every entry exists because the title is prose ("border-inline & border-block")
  * rather than a property name, so `/^[a-z-]+$/` cannot recover it.
  */
-const PROPERTY_TITLE_EXCEPTIONS = new Map(Object.entries({
-  'block-size & inline-size': ['block-size', 'inline-size'],
-  'border-inline & border-block': ['border-inline', 'border-block'],
-  'border-inline & border-block individual logical properties': [
-    'border-block-end',
-    'border-block-start',
-    'border-inline-end',
-    'border-inline-start',
-  ],
-  'border-inline & border-block longhand properties': [
-    'border-block-color',
-    'border-block-style',
-    'border-block-width',
-    'border-inline-color',
-    'border-inline-style',
-    'border-inline-width',
-  ],
-  'border-radius logical properties': [
-    'border-end-end-radius',
-    'border-end-start-radius',
-    'border-start-end-radius',
-    'border-start-start-radius',
-  ],
-  'color-scheme CSS property': ['color-scheme'],
-  'css column properties': [
-    'column-count',
-    'column-fill',
-    'column-gap',
-    'column-rule',
-    'column-rule-color',
-    'column-rule-style',
-    'column-rule-width',
-    'column-span',
-    'column-width',
-    'columns',
-  ],
-  'gap, column-gap, row-gap': ['column-gap', 'gap', 'row-gap'],
-  'grid-template-* properties': [
-    'grid-template',
-    'grid-template-areas',
-    'grid-template-columns',
-    'grid-template-rows',
-  ],
-  'left, right, top, bottom': ['left', 'right', 'top', 'bottom'],
-  'margin-block-start & margin-block-end': ['margin-block-end', 'margin-block-start'],
-  'margin-inline & margin-block': ['margin-block', 'margin-inline'],
-  'margin-inline-start & margin-inline-end': ['margin-inline-end', 'margin-inline-start'],
-  'padding-block-start & padding-block-end': ['padding-block-end', 'padding-block-start'],
-  'padding-inline & padding-block': ['padding-block', 'padding-inline'],
-  'padding-inline-start & padding-inline-end': ['padding-inline-end', 'padding-inline-start'],
-}));
+const PROPERTY_TITLE_EXCEPTIONS = new Map(
+  Object.entries({
+    'block-size & inline-size': ['block-size', 'inline-size'],
+    'border-inline & border-block': ['border-inline', 'border-block'],
+    'border-inline & border-block individual logical properties': [
+      'border-block-end',
+      'border-block-start',
+      'border-inline-end',
+      'border-inline-start',
+    ],
+    'border-inline & border-block longhand properties': [
+      'border-block-color',
+      'border-block-style',
+      'border-block-width',
+      'border-inline-color',
+      'border-inline-style',
+      'border-inline-width',
+    ],
+    'border-radius logical properties': [
+      'border-end-end-radius',
+      'border-end-start-radius',
+      'border-start-end-radius',
+      'border-start-start-radius',
+    ],
+    'color-scheme CSS property': ['color-scheme'],
+    'css column properties': [
+      'column-count',
+      'column-fill',
+      'column-gap',
+      'column-rule',
+      'column-rule-color',
+      'column-rule-style',
+      'column-rule-width',
+      'column-span',
+      'column-width',
+      'columns',
+    ],
+    'gap, column-gap, row-gap': ['column-gap', 'gap', 'row-gap'],
+    'grid-template-* properties': [
+      'grid-template',
+      'grid-template-areas',
+      'grid-template-columns',
+      'grid-template-rows',
+    ],
+    'left, right, top, bottom': ['left', 'right', 'top', 'bottom'],
+    'margin-block-start & margin-block-end': ['margin-block-end', 'margin-block-start'],
+    'margin-inline & margin-block': ['margin-block', 'margin-inline'],
+    'margin-inline-start & margin-inline-end': ['margin-inline-end', 'margin-inline-start'],
+    'padding-block-start & padding-block-end': ['padding-block-end', 'padding-block-start'],
+    'padding-inline & padding-block': ['padding-block', 'padding-inline'],
+    'padding-inline-start & padding-inline-end': ['padding-inline-end', 'padding-inline-start'],
+  }),
+);
 
 /**
  * CSS titles that name a set of *values* rather than a property or a pair.
@@ -118,80 +120,100 @@ const VALUE_TITLE_EXCEPTIONS = {
 /**
  * HTML titles that name elements the `/<(\w+)>/` convention cannot recover.
  */
-const ELEMENT_TITLE_EXCEPTIONS = new Map(Object.entries({
-  // Bare word, no angle brackets.
-  address: ['address'],
-  // A range, not a list: the convention would recover h1 and h6 and drop h2-h5.
-  '<h1> to <h6> elements': ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
-  // The doctype is a directive, not a tag; `detectHtml` matches it specially.
-  'HTML5 doctype': [],
-  // Prose title covering the whole HTML5 sectioning/semantic element set.
-  'HTML5 semantics': [
-    'article',
-    'aside',
-    'details',
-    'figcaption',
-    'figure',
-    'footer',
-    'header',
-    'main',
-    'mark',
-    'nav',
-    'section',
-    'summary',
-    'time',
-  ],
-  // "Image maps" is <map>, and the title does not say so.
-  'Image maps': ['map'],
-  // The <svg> in the title is context; the element measured is SVG's <image>.
-  'Embedded <svg> image': ['image'],
-}));
+const ELEMENT_TITLE_EXCEPTIONS = new Map(
+  Object.entries({
+    // Bare word, no angle brackets.
+    address: ['address'],
+    // A range, not a list: the convention would recover h1 and h6 and drop h2-h5.
+    '<h1> to <h6> elements': ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+    // The doctype is a directive, not a tag; `detectHtml` matches it specially.
+    'HTML5 doctype': [],
+    // Prose title covering the whole HTML5 sectioning/semantic element set.
+    'HTML5 semantics': [
+      'article',
+      'aside',
+      'details',
+      'figcaption',
+      'figure',
+      'footer',
+      'header',
+      'main',
+      'mark',
+      'nav',
+      'section',
+      'summary',
+      'time',
+    ],
+    // "Image maps" is <map>, and the title does not say so.
+    'Image maps': ['map'],
+    // The <svg> in the title is context; the element measured is SVG's <image>.
+    'Embedded <svg> image': ['image'],
+  }),
+);
 
 /**
  * HTML titles that pair an element with an attribute, where the pairing is not
  * spelled `<el attr="value">`.
  */
-const ELEMENT_ATTRIBUTE_TITLE_EXCEPTIONS = new Map(Object.entries({
-  'Local anchors': { element: 'a', matchers: [['href', /^#/], ['name', null]] },
-  'mailto: links': { element: 'a', matchers: [['href', /^mailto:/i]] },
-  'color-scheme meta tag': { element: 'meta', matchers: [['name', 'color-scheme']] },
-  'AMP for Email': { element: 'html', matchers: [['⚡4email', null], ['amp4email', null]] },
-}));
+const ELEMENT_ATTRIBUTE_TITLE_EXCEPTIONS = new Map(
+  Object.entries({
+    'Local anchors': {
+      element: 'a',
+      matchers: [
+        ['href', /^#/],
+        ['name', null],
+      ],
+    },
+    'mailto: links': { element: 'a', matchers: [['href', /^mailto:/i]] },
+    'color-scheme meta tag': { element: 'meta', matchers: [['name', 'color-scheme']] },
+    'AMP for Email': {
+      element: 'html',
+      matchers: [
+        ['⚡4email', null],
+        ['amp4email', null],
+      ],
+    },
+  }),
+);
 
 /** File extension -> image feature title. */
-const IMAGE_EXTENSION_TITLES = new Map(Object.entries({
-  apng: 'Animated PNG image format',
-  avif: 'AVIF image format',
-  bmp: 'BMP image format',
-  gif: 'GIF image format',
-  heic: 'HEIF image format',
-  heif: 'HEIF image format',
-  ico: 'ICO image format',
-  jpeg: 'JPG image format',
-  jpg: 'JPG image format',
-  png: 'PNG image format',
-  svg: 'SVG image format',
-  tif: 'TIFF image format',
-  tiff: 'TIFF image format',
-  webp: 'webP image format',
-}));
+const IMAGE_EXTENSION_TITLES = new Map(
+  Object.entries({
+    apng: 'Animated PNG image format',
+    avif: 'AVIF image format',
+    bmp: 'BMP image format',
+    gif: 'GIF image format',
+    heic: 'HEIF image format',
+    heif: 'HEIF image format',
+    ico: 'ICO image format',
+    jpeg: 'JPG image format',
+    jpg: 'JPG image format',
+    png: 'PNG image format',
+    svg: 'SVG image format',
+    tif: 'TIFF image format',
+    tiff: 'TIFF image format',
+    webp: 'webP image format',
+  }),
+);
 
 /** data: URI MIME type -> image feature title. */
-const IMAGE_MIME_TITLES = new Map(Object.entries({
-  'image/apng': 'Animated PNG image format',
-  'image/avif': 'AVIF image format',
-  'image/bmp': 'BMP image format',
-  'image/gif': 'GIF image format',
-  'image/heic': 'HEIF image format',
-  'image/heif': 'HEIF image format',
-  'image/jpeg': 'JPG image format',
-  'image/jpg': 'JPG image format',
-  'image/png': 'PNG image format',
-  'image/svg+xml': 'SVG image format',
-  'image/tiff': 'TIFF image format',
-  'image/vnd.microsoft.icon': 'ICO image format',
-  'image/webp': 'webP image format',
-}));
+const IMAGE_MIME_TITLES = new Map(
+  Object.entries({
+    'image/apng': 'Animated PNG image format',
+    'image/avif': 'AVIF image format',
+    'image/bmp': 'BMP image format',
+    'image/gif': 'GIF image format',
+    'image/heic': 'HEIF image format',
+    'image/heif': 'HEIF image format',
+    'image/jpeg': 'JPG image format',
+    'image/jpg': 'JPG image format',
+    'image/png': 'PNG image format',
+    'image/svg+xml': 'SVG image format',
+    'image/tiff': 'TIFF image format',
+    'image/vnd.microsoft.icon': 'ICO image format',
+    'image/webp': 'webP image format',
+  }),
+);
 
 /**
  * Titles that name a selector shape rather than anything textual.
@@ -265,11 +287,13 @@ function createTables(features) {
 
     // "@media" -> "media". Media-feature titles keep their parenthesised part,
     // which `matchAtRule` matches against the at-rule prelude.
-    atRules: css.filter((t) => t.startsWith('@')).map((title) => ({
-      title,
-      names: [...title.matchAll(/@([a-z-]+)/g)].map((m) => m[1]),
-      features: [...title.matchAll(/\(([a-z-]+)\)/g)].map((m) => m[1]),
-    })),
+    atRules: css
+      .filter((t) => t.startsWith('@'))
+      .map((title) => ({
+        title,
+        names: [...title.matchAll(/@([a-z-]+)/g)].map((m) => m[1]),
+        features: [...title.matchAll(/\(([a-z-]+)\)/g)].map((m) => m[1]),
+      })),
 
     // "linear-gradient()" -> "linear-gradient". A title may name several
     // functions ("lch(), oklch(), lab(), oklab()"), so every name is taken.
@@ -297,7 +321,10 @@ function createTables(features) {
     properties: css.flatMap((title) => {
       const exception = PROPERTY_TITLE_EXCEPTIONS.get(title);
       if (exception) return [{ title, names: exception }];
-      const trimmed = title.trim().replace(/ shorthand$/, '').replace(/ property$/, '');
+      const trimmed = title
+        .trim()
+        .replace(/ shorthand$/, '')
+        .replace(/ property$/, '');
       return PROPERTY_NAME.test(trimmed) ? [{ title, names: [trimmed] }] : [];
     }),
 
@@ -400,7 +427,9 @@ export function matchPropertyValuePair(tables, propertyName, propertyValue) {
 export function matchFunctions(tables, propertyValue) {
   // No whitespace before the paren: CSS functional notation does not allow it,
   // and permitting it turns `Arial (fallback)` into a function call.
-  const called = new Set([...propertyValue.matchAll(/([a-z-]+)\(/gi)].map((m) => m[1].toLowerCase()));
+  const called = new Set(
+    [...propertyValue.matchAll(/([a-z-]+)\(/gi)].map((m) => m[1].toLowerCase()),
+  );
   return tables.functions.filter((f) => f.names.some((n) => called.has(n))).map((f) => f.title);
 }
 
@@ -413,7 +442,11 @@ export function matchKeywords(tables, propertyValue) {
 export function matchValues(tables, propertyValue) {
   const titles = [];
   for (const { title, names } of tables.values) {
-    if (names.some((name) => new RegExp(`(^|[\\s,])${escapeRegExp(name)}([\\s,]|$)`).test(propertyValue))) {
+    if (
+      names.some((name) =>
+        new RegExp(`(^|[\\s,])${escapeRegExp(name)}([\\s,]|$)`).test(propertyValue),
+      )
+    ) {
       titles.push(title);
     }
   }

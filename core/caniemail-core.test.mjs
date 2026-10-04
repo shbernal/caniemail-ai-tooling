@@ -116,7 +116,10 @@ test('regression: date-stamped keys after semver keys still resolve to the last'
 
 test('a version can be pinned explicitly', () => {
   const feature = { stats: { outlook: { windows: { 2016: 'n', 2019: 'y' } } } };
-  assert.equal(resolveSupport(feature, 'outlook.windows', { version: '2016' }).verdict, UNSUPPORTED);
+  assert.equal(
+    resolveSupport(feature, 'outlook.windows', { version: '2016' }).verdict,
+    UNSUPPORTED,
+  );
   assert.equal(resolveSupport(feature, 'outlook.windows').verdict, SUPPORTED);
 });
 
@@ -282,7 +285,10 @@ test('a limit that can return nothing is an error, not an empty result', () => {
   // and read as "no such feature".
   assert.throws(() => searchFeatures(dataset, 'flexbox', { limit: 0 }), /positive integer/);
   assert.throws(() => searchFeatures(dataset, 'flexbox', { limit: -5 }), /positive integer/);
-  assert.throws(() => searchFeatures(dataset, 'flexbox', { limit: Number.NaN }), /positive integer/);
+  assert.throws(
+    () => searchFeatures(dataset, 'flexbox', { limit: Number.NaN }),
+    /positive integer/,
+  );
   assert.throws(() => searchFeatures(dataset, 'flexbox', { limit: 2.5 }), /positive integer/);
   // Absent is not the same as invalid: the default still applies.
   assert.deepEqual(
@@ -392,7 +398,10 @@ test('lint reports failures with position, notes and url', () => {
   assert.equal(legend.occurrence_count, 1);
 
   const radius = result.findings.find((f) => f.feature === 'css-border-radius');
-  assert.ok(radius.notes.some((n) => /VML|RoundRect/i.test(n)), 'expected the VML workaround note');
+  assert.ok(
+    radius.notes.some((n) => /VML|RoundRect/i.test(n)),
+    'expected the VML workaround note',
+  );
 });
 
 test('the legend covers exactly the features the findings name', () => {
@@ -459,11 +468,18 @@ test('per-client notes never contradict the verdict they attach to', () => {
 
   const outlook = findings.find((f) => f.clients_affected.includes('outlook.windows'));
   assert.equal(outlook.verdict, UNSUPPORTED);
-  assert.deepEqual(outlook.notes, [], 'the Outlook error must not carry Gmail’s partial-support note');
+  assert.deepEqual(
+    outlook.notes,
+    [],
+    'the Outlook error must not carry Gmail’s partial-support note',
+  );
 
   const gmail = findings.find((f) => f.clients_affected.includes('gmail.desktop-webmail'));
   assert.equal(gmail.verdict, MITIGATED);
-  assert.ok(gmail.notes.some((n) => /column-gap/.test(n)), 'Gmail keeps its own note');
+  assert.ok(
+    gmail.notes.some((n) => /column-gap/.test(n)),
+    'Gmail keeps its own note',
+  );
 });
 
 test('every occurrence of a feature is reported, not just the first', () => {
@@ -737,9 +753,13 @@ test('markup inside a conditional comment is not reported as the document’s', 
 /* Network                                                                     */
 /* -------------------------------------------------------------------------- */
 
-test('live fetch never returns an older dataset than the bundle', { skip: !process.env.CANIEMAIL_TEST_NETWORK }, async () => {
-  const live = await loadDataset({ maxAgeMs: 0 });
-  assert.ok(['live', 'cache'].includes(live.meta.source));
-  assert.equal(live.meta.warning, null);
-  assert.ok(Date.parse(live.meta.lastUpdate) >= Date.parse(dataset.meta.lastUpdate));
-});
+test(
+  'live fetch never returns an older dataset than the bundle',
+  { skip: !process.env.CANIEMAIL_TEST_NETWORK },
+  async () => {
+    const live = await loadDataset({ maxAgeMs: 0 });
+    assert.ok(['live', 'cache'].includes(live.meta.source));
+    assert.equal(live.meta.warning, null);
+    assert.ok(Date.parse(live.meta.lastUpdate) >= Date.parse(dataset.meta.lastUpdate));
+  },
+);

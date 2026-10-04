@@ -286,19 +286,23 @@ test('a failed fetch with no cache falls back to the bundled snapshot', async (t
 // this test does not fail, it waits for as long as the peer holds the socket —
 // which is the defect itself, and would wedge `node --test` rather than report
 // anything. Five seconds is twenty times the abort it is checking.
-test('a server that accepts the connection and says nothing hits the timeout', { timeout: 5_000 }, async (t) => {
-  // Never responds. Without the AbortController this hangs for as long as the
-  // peer keeps the socket open, which for an MCP server means the editor's
-  // first tool call never returns.
-  const h = await harness(t, () => {});
+test(
+  'a server that accepts the connection and says nothing hits the timeout',
+  { timeout: 5_000 },
+  async (t) => {
+    // Never responds. Without the AbortController this hangs for as long as the
+    // peer keeps the socket open, which for an MCP server means the editor's
+    // first tool call never returns.
+    const h = await harness(t, () => {});
 
-  const started = Date.now();
-  const dataset = await h.load({ timeoutMs: 250 });
-  const elapsed = Date.now() - started;
+    const started = Date.now();
+    const dataset = await h.load({ timeoutMs: 250 });
+    const elapsed = Date.now() - started;
 
-  assert.equal(dataset.meta.source, 'bundled');
-  assert.ok(elapsed < 5_000, `fell back after ${elapsed}ms, so the abort fired`);
-});
+    assert.equal(dataset.meta.source, 'bundled');
+    assert.ok(elapsed < 5_000, `fell back after ${elapsed}ms, so the abort fired`);
+  },
+);
 
 /* -------------------------------------------------------------------------- */
 /* Offline                                                                     */
@@ -388,7 +392,11 @@ test('calls arriving during a reload share it rather than starting their own', a
 
 test('a dataset inside its window is not reloaded', async (t) => {
   const h = await harness(t);
-  const get = revalidatingDataset(60_000, { cacheDir: h.cacheDir, dataUrl: h.dataUrl, maxAgeMs: 0 });
+  const get = revalidatingDataset(60_000, {
+    cacheDir: h.cacheDir,
+    dataUrl: h.dataUrl,
+    maxAgeMs: 0,
+  });
 
   const first = await get();
   assert.equal(await get(), first);

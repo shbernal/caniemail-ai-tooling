@@ -158,7 +158,10 @@ class Sightings {
       out.set(title, {
         title,
         positions: ranges.map((range) =>
-          formatPosition({ start: this.index.locate(range.start), end: this.index.locate(range.end) }),
+          formatPosition({
+            start: this.index.locate(range.start),
+            end: this.index.locate(range.end),
+          }),
         ),
         occurrence_count: seen.size,
       });
@@ -224,7 +227,9 @@ function detectHtml(source, sightings) {
   for (const element of scan.elements) {
     const { start, end } = element;
     const names = element.attributes.map((attribute) => attribute.name);
-    const values = new Map(element.attributes.map((attribute) => [attribute.name, attribute.value]));
+    const values = new Map(
+      element.attributes.map((attribute) => [attribute.name, attribute.value]),
+    );
 
     for (const title of matchElement(tables, element.tagName)) sightings.record(title, start, end);
     for (const title of matchAttributes(tables, names)) sightings.record(title, start, end);

@@ -127,7 +127,9 @@ server.registerTool(
   },
   async ({ html, css, clients, include_untested }) => {
     try {
-      return json(lintEmail(await getDataset(), { html, css, clients, includeUntested: include_untested }));
+      return json(
+        lintEmail(await getDataset(), { html, css, clients, includeUntested: include_untested }),
+      );
     } catch (error) {
       return fail(error);
     }

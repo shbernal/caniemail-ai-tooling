@@ -70,7 +70,11 @@ test('search prints JSON results on stdout', async () => {
 
 test('check prints a per-client verdict', async () => {
   const result = await run([
-    'check', 'css-border-radius', '--clients', 'outlook.windows', '--offline',
+    'check',
+    'css-border-radius',
+    '--clients',
+    'outlook.windows',
+    '--offline',
   ]);
   assert.equal(result.code, 0, result.stderr);
   const output = parse(result);
@@ -89,7 +93,14 @@ test('clients lists the whole roster', async () => {
 
 test('lint reads a file given --html', async () => {
   const fixture = join(here, 'fixtures', 'emails', 'template-newsletter.html');
-  const result = await run(['lint', '--html', fixture, '--clients', 'outlook.windows', '--offline']);
+  const result = await run([
+    'lint',
+    '--html',
+    fixture,
+    '--clients',
+    'outlook.windows',
+    '--offline',
+  ]);
   assert.equal(result.code, 0, result.stderr);
   const output = parse(result);
   assert.ok(output.findings.length > 0);

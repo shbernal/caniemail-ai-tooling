@@ -60,7 +60,10 @@ test('declarations inside at-rule blocks are found', () => {
 test('nested at-rules are descended into as well', () => {
   const css = '@media (prefers-color-scheme: dark) { @supports (gap: 1px) { .a { gap: 8px } } }';
   assert.deepEqual(declarationsIn(css), ['gap:8px']);
-  assert.deepEqual(scanCss(css).atRules.map((rule) => rule.name), ['supports', 'media']);
+  assert.deepEqual(
+    scanCss(css).atRules.map((rule) => rule.name),
+    ['supports', 'media'],
+  );
 });
 
 test('at-rules carry a position and a prelude', () => {
@@ -72,9 +75,10 @@ test('at-rules carry a position and a prelude', () => {
 });
 
 test('a vendor-prefixed at-rule keeps the unprefixed name', () => {
-  assert.deepEqual(scanCss('@-webkit-keyframes f { from { opacity: 0 } }').atRules.map((r) => r.name), [
-    'keyframes',
-  ]);
+  assert.deepEqual(
+    scanCss('@-webkit-keyframes f { from { opacity: 0 } }').atRules.map((r) => r.name),
+    ['keyframes'],
+  );
 });
 
 test('a statement at-rule ends at its semicolon', () => {
@@ -88,40 +92,43 @@ test('keyframe stops contribute declarations but not selectors', () => {
   // be a pure false positive, and descending into at-rules is what exposes it.
   const scan = scanCss('@keyframes fade { from { opacity: 0 } to { opacity: 1 } }');
   assert.equal(scan.rules.length, 0);
-  assert.deepEqual(scan.declarations.map((declaration) => declaration.property), [
-    'opacity',
-    'opacity',
-  ]);
+  assert.deepEqual(
+    scan.declarations.map((declaration) => declaration.property),
+    ['opacity', 'opacity'],
+  );
 });
 
 test('at-rules holding declarations directly are handled', () => {
   const scan = scanCss('@font-face { font-family: "Brand"; src: url("b.woff2") }');
-  assert.deepEqual(scan.declarations.map((declaration) => declaration.property), [
-    'font-family',
-    'src',
-  ]);
+  assert.deepEqual(
+    scan.declarations.map((declaration) => declaration.property),
+    ['font-family', 'src'],
+  );
 });
 
 test('nested rules are found and the ampersand survives', () => {
   const scan = scanCss('.outer { color: red; & .inner { color: blue } }');
-  assert.deepEqual(scan.rules.map((rule) => rule.selectors), [['& .inner'], ['.outer']]);
+  assert.deepEqual(
+    scan.rules.map((rule) => rule.selectors),
+    [['& .inner'], ['.outer']],
+  );
 });
 
 test('braces inside strings do not end a rule', () => {
   const scan = scanCss('.a { content: "} not a brace {"; color: red }');
   assert.equal(scan.rules.length, 1);
-  assert.deepEqual(scan.rules[0].declarations.map((declaration) => declaration.property), [
-    'content',
-    'color',
-  ]);
+  assert.deepEqual(
+    scan.rules[0].declarations.map((declaration) => declaration.property),
+    ['content', 'color'],
+  );
 });
 
 test('braces and semicolons inside url() do not end anything', () => {
   const scan = scanCss('.a { background: url("a}b;c.png"); color: red }');
-  assert.deepEqual(scan.rules[0].declarations.map((declaration) => declaration.value), [
-    'url("a}b;c.png")',
-    'red',
-  ]);
+  assert.deepEqual(
+    scan.rules[0].declarations.map((declaration) => declaration.value),
+    ['url("a}b;c.png")', 'red'],
+  );
 });
 
 test('comments are reported and stripped out of values', () => {
@@ -132,18 +139,22 @@ test('comments are reported and stripped out of values', () => {
 
 test('a malformed declaration does not take the rest of the rule with it', () => {
   const scan = scanCss('.a { color red; float: left; display: grid }');
-  assert.deepEqual(scan.rules[0].declarations.map((declaration) => declaration.property), [
-    'float',
-    'display',
-  ]);
+  assert.deepEqual(
+    scan.rules[0].declarations.map((declaration) => declaration.property),
+    ['float', 'display'],
+  );
 });
 
 test('an unclosed block still yields what it contained', () => {
   const scan = scanCss('@media (max-width: 600px) { .a { display: flex;');
-  assert.deepEqual(declarationsIn(scan.rules.length ? '@media (max-width: 600px) { .a { display: flex;' : ''), [
-    'display:flex',
-  ]);
-  assert.deepEqual(scan.atRules.map((rule) => rule.name), ['media']);
+  assert.deepEqual(
+    declarationsIn(scan.rules.length ? '@media (max-width: 600px) { .a { display: flex;' : ''),
+    ['display:flex'],
+  );
+  assert.deepEqual(
+    scan.atRules.map((rule) => rule.name),
+    ['media'],
+  );
 });
 
 test('an unterminated string, url( or [ costs its own rule, not the stylesheet', () => {
@@ -166,7 +177,10 @@ test('an unterminated string, url( or [ costs its own rule, not the stylesheet',
 test('a string ends at a newline it does not escape', () => {
   assert.deepEqual(declarationsIn('.a{content:"x\ncolor:red}'), ['content:"x\ncolor:red']);
   assert.deepEqual(declarationsIn('.a{content:"x;\ncolor:red}'), ['content:"x', 'color:red']);
-  assert.deepEqual(declarationsIn('.a{content:"x\\\ny";color:red}'), ['content:"x\\\ny"', 'color:red']);
+  assert.deepEqual(declarationsIn('.a{content:"x\\\ny";color:red}'), [
+    'content:"x\\\ny"',
+    'color:red',
+  ]);
 });
 
 test('an unterminated comment runs to the end, as it does in every client', () => {
@@ -192,7 +206,10 @@ test('an escaped character in a value or a group is not syntax', () => {
   // An escaped slash cannot open a comment.
   const scan = scanCss('.a\\/*b{color:red}');
   assert.deepEqual(scan.comments, []);
-  assert.deepEqual(scan.rules.at(-1).declarations.map((d) => d.property), ['color']);
+  assert.deepEqual(
+    scan.rules.at(-1).declarations.map((d) => d.property),
+    ['color'],
+  );
 });
 
 test('the IE filter hack keeps its bracketed suffix in the property name', () => {
@@ -271,10 +288,10 @@ test('a malformed style attribute yields the declarations around it', () => {
     scanStyleAttribute('color:red; not-a-declaration; float:left').map((d) => d.property),
     ['color', 'float'],
   );
-  assert.deepEqual(scanStyleAttribute('margin:0;;padding:0;').map((d) => d.property), [
-    'margin',
-    'padding',
-  ]);
+  assert.deepEqual(
+    scanStyleAttribute('margin:0;;padding:0;').map((d) => d.property),
+    ['margin', 'padding'],
+  );
 });
 
 test('property names are lowercased, values are not', () => {
