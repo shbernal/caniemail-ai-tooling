@@ -51,7 +51,7 @@ const getDataset = revalidatingDataset(REVALIDATE_MS, { offline });
 /**
  * The client roster, inlined into the tool descriptions.
  *
- * This is 48 fixed strings and an agent cannot call anything usefully without
+ * This is about fifty fixed strings and an agent cannot call anything usefully without
  * them — it has to know that `outlook.windows` (Word renderer) and
  * `outlook.outlook-com` (webmail) are different engines with very different
  * support before it can pick targets. Spending the tokens here beats a fifth
@@ -61,8 +61,8 @@ const getDataset = revalidatingDataset(REVALIDATE_MS, { offline });
  * descriptions are registered once and this is the only thing that has to exist
  * before `connect()`. Taking it from the snapshot costs no network, so the
  * handshake never waits on caniemail.com — previously a slow or black-holed
- * network delayed `initialize` by the full fetch timeout. The roster is 48
- * identifiers that change about never; if upstream adds a client, the
+ * network delayed `initialize` by the full fetch timeout. The roster is a list
+ * of identifiers that changes about never; if upstream adds a client, the
  * descriptions catch up on the next restart while the *data* is already current
  * from the first tool call.
  */

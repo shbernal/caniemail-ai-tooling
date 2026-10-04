@@ -34,7 +34,7 @@ dataset.
   deciding how to build something rather than checking what you built.
 - `search_features` finds feature slugs by keyword. Slugs are not guessable:
   "rounded corners" is `css-border-radius`, flexbox is `css-display-flex`.
-- `list_email_clients` is the roster of 48 clients with display names. It is
+- `list_email_clients` is the full client roster with display names. It is
   inlined into the other tools' descriptions, so this is rarely needed.
 
 ## Four verdicts, not a boolean

@@ -93,7 +93,7 @@ clients
 ```
 
 `--clients` takes comma-separated `family.platform` globs. Wildcards work on
-either segment: `outlook.windows`, `outlook.*`, `*.ios`, or `*` for all 48.
+either segment: `outlook.windows`, `outlook.*`, `*.ios`, or `*` for all of them.
 
 `lint` reads stdin as HTML when given neither `--html` nor `--css`, so
 `cat draft.html | node scripts/caniemail.mjs lint --clients '*'` works.

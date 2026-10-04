@@ -148,7 +148,16 @@ try {
       findings.every((f) => f.verdict !== 'untested'),
     `${new Set(findings.map((f) => f.verdict)).size} distinct verdicts`,
   );
-  check('lint_email survives the "*" glob', payload(lint).clients_checked.length === 48);
+  // Compared against the roster rather than a number, which a client added
+  // upstream would falsify without anything here being wrong.
+  const roster = payload(
+    await request('tools/call', { name: 'list_email_clients', arguments: {} }),
+  );
+  check(
+    'lint_email survives the "*" glob',
+    payload(lint).clients_checked.length === roster.count,
+    `${payload(lint).clients_checked.length} of ${roster.count}`,
+  );
 
   // The legend is what makes a finding readable — its title, url and positions
   // all live there now — so a serialisation that drops it, or a slug that does
@@ -174,8 +183,11 @@ try {
   });
   check('unknown slug returns a tool error, not a crash', bad.result.isError === true);
 
-  const clients = await request('tools/call', { name: 'list_email_clients', arguments: {} });
-  check('list_email_clients returns 48', payload(clients).count === 48);
+  check(
+    'list_email_clients counts what it lists',
+    roster.count > 0 && roster.count === roster.clients.length,
+    `${roster.count}`,
+  );
 } finally {
   child.kill();
 }
