@@ -125,7 +125,29 @@ test('a complex selector reports every shape it uses', () => {
 });
 
 test('malformed selectors degrade rather than throw', () => {
-  for (const selector of ['', '   ', '>', '[unclosed', ':not(', '.a..b', '::', '#']) {
+  for (const selector of ['', '   ', '>', '[unclosed', ':not(', '.a..b', '::', '#', ')', 'a)']) {
     assert.doesNotThrow(() => analyzeSelector(selector), `threw on ${JSON.stringify(selector)}`);
   }
+});
+
+test('an escaped character is part of the identifier, not syntax', () => {
+  // Utility-class frameworks emit these constantly. Skipped wrongly, an escape
+  // does not throw, it reports the wrong shape: `.md\:flex` read as a class
+  // followed by a `:flex` pseudo-class, `.a\ b` as a descendant combinator.
+  assert.deepEqual(shapesOf('.md\\:flex'), [CLASS]);
+  assert.deepEqual([...analyzeSelector('.md\\:flex').pseudos], []);
+  assert.deepEqual(shapesOf('.a\\ b'), [CLASS]);
+  assert.deepEqual(shapesOf('a\\.b'), [TYPE]);
+  assert.deepEqual(shapesOf('[title="a\\"b > c"]'), [ATTRIBUTE]);
+  assert.deepEqual(shapesOf(':not(a\\) > b)'), []);
+  assert.deepEqual(shapesOf('[data-x=a\\] > b]'), [ATTRIBUTE]);
+  assert.deepEqual(shapesOf(':is("x) > y")'), []);
+});
+
+test('a truncated attribute or pseudo argument runs to the end, quietly', () => {
+  assert.deepEqual(shapesOf('[title="unterminated > x'), [ATTRIBUTE]);
+  // A `]` inside the quotes does not close the attribute selector.
+  assert.deepEqual(shapesOf("[title='a] > b'] > c"), [ATTRIBUTE, CHILD, TYPE].sort());
+  assert.deepEqual(shapesOf(':is(unterminated > x'), []);
+  assert.deepEqual([...analyzeSelector(':is(unterminated').pseudos], ['is']);
 });

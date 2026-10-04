@@ -175,6 +175,35 @@ test('an unterminated comment runs to the end, as it does in every client', () =
   assert.deepEqual(scanCss(css).comments, [{ start: 14, end: css.length }]);
 });
 
+test('an escaped character in a value or a group is not syntax', () => {
+  assert.deepEqual(declarationsIn('.a{font-family:Foo\\;Bar;color:red}'), [
+    'font-family:Foo\\;Bar',
+    'color:red',
+  ]);
+  assert.deepEqual(declarationsIn('.a{background:url(a\\)b.png);color:red}'), [
+    'background:url(a\\)b.png)',
+    'color:red',
+  ]);
+  // A close paren inside a comment does not close the group around it.
+  assert.deepEqual(declarationsIn('.a{color:rgb(/* ) */ 0,0,0);float:left}'), [
+    'color:rgb( 0,0,0)',
+    'float:left',
+  ]);
+  // An escaped slash cannot open a comment.
+  const scan = scanCss('.a\\/*b{color:red}');
+  assert.deepEqual(scan.comments, []);
+  assert.deepEqual(scan.rules.at(-1).declarations.map((d) => d.property), ['color']);
+});
+
+test('the IE filter hack keeps its bracketed suffix in the property name', () => {
+  // Real Outlook-era markup. `filter[...]` is not a property character, and
+  // without the hack the declaration would not parse at all.
+  assert.deepEqual(
+    declarationsIn('.a{filter[progid:DXImageTransform.Microsoft.gradient]:none;color:red}'),
+    ['filter[progid:dximagetransform.microsoft.gradient]:none', 'color:red'],
+  );
+});
+
 test('a stray closing brace at the top level does not end the stylesheet', () => {
   assert.deepEqual(declarationsIn('} .a{color:red} } .b{float:left}'), ['color:red', 'float:left']);
 });

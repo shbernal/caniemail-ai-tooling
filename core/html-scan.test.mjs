@@ -188,3 +188,18 @@ test('many raw-text elements in a large document scan in linear time', () => {
   scanHtml(html);
   assert.ok(performance.now() - started < 100);
 });
+
+test('a closing tag ends the elements left open inside it', () => {
+  const { elements } = scanHtml('<b><i>x</b>y</i>');
+  const end = (tagName) => elements.find((element) => element.tagName === tagName).end;
+  assert.equal(end('b'), 10);
+  assert.equal(end('i'), 6, 'the <i> ends where </b> begins, not at its own stray </i>');
+});
+
+test('a character that cannot start an attribute name is stepped over', () => {
+  const [div] = scanHtml('<div =x id=a>').elements;
+  assert.deepEqual(
+    div.attributes.map((attribute) => [attribute.name, attribute.value]),
+    [['x', ''], ['id', 'a']],
+  );
+});
