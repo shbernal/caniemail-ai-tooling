@@ -322,7 +322,9 @@ is the review artifact.
   MCP server holds a dataset for 15 minutes at a time, because a server that
   loads at startup and never refetches reports `source: "live"` for as long as
   the editor stays open. Its startup reads only the bundled snapshot, so the
-  handshake never waits on the network.
+  handshake never waits on the network. The holder is `revalidatingDataset` in
+  the core, where `core/dataset-cache.test.mjs` can drive it: calls that
+  arrive during a reload share that reload instead of starting their own.
 - Tool output is **compact JSON, and sized for a context window**. Both surfaces
   drop indentation when nothing human is reading (the CLI keeps it at a TTY);
   repeated constants become one legend on the result, and client lists compress

@@ -66,6 +66,14 @@
   `--clients --offline` read as a client named "--offline" and ran against the
   network; it is now the error `--clients needs a value.`
 
+- The MCP server loads the dataset once per revalidation, however many tool
+  calls arrive while it is loading. Each call that found the 15-minute window
+  expired started its own load, so an agent firing three tools after a quiet
+  spell paid for three fetches and kept one. The holder is now
+  `revalidatingDataset` in the core. `list_email_clients` also returns a
+  failure as a tool error, as the other three tools do, instead of letting it
+  escape as a protocol error.
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is

@@ -27,7 +27,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promis
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { loadDataset } from './caniemail-core.mjs';
+import { loadDataset, revalidatingDataset } from './caniemail-core.mjs';
 
 /**
  * A dataset small enough to read, and distinguishable from the bundled
@@ -349,4 +349,62 @@ test('an unwritable cache costs a rewrite, not the answer', async (t) => {
     [],
     'the temp file is cleaned up when the rename fails',
   );
+});
+
+/* -------------------------------------------------------------------------- */
+/* A long-lived process                                                        */
+/* -------------------------------------------------------------------------- */
+
+/** Hold every response until `release` is called, so calls can overlap. */
+function heldServer() {
+  const waiting = [];
+  const handler = (request, response) => waiting.push(() => serveJson(REMOTE)(request, response));
+  return { handler, release: () => waiting.splice(0).forEach((respond) => respond()) };
+}
+
+test('calls arriving during a reload share it rather than starting their own', async (t) => {
+  const held = heldServer();
+  const h = await harness(t, held.handler);
+  // `maxAgeMs: 0` keeps the disk cache from answering, so every load is a fetch
+  // and the hit count is the load count.
+  const get = revalidatingDataset(0, { cacheDir: h.cacheDir, dataUrl: h.dataUrl, maxAgeMs: 0 });
+
+  const calls = Array.from({ length: 5 }, () => get());
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  held.release();
+  const datasets = await Promise.all(calls);
+
+  assert.equal(h.hits, 1);
+  assert.ok(datasets.every((dataset) => dataset === datasets[0]));
+
+  // Expired, which with a window of 0 is immediately: the next burst reloads,
+  // once.
+  const again = Array.from({ length: 5 }, () => get());
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  held.release();
+  await Promise.all(again);
+  assert.equal(h.hits, 2);
+});
+
+test('a dataset inside its window is not reloaded', async (t) => {
+  const h = await harness(t);
+  const get = revalidatingDataset(60_000, { cacheDir: h.cacheDir, dataUrl: h.dataUrl, maxAgeMs: 0 });
+
+  const first = await get();
+  assert.equal(await get(), first);
+  assert.equal(h.hits, 1);
+});
+
+test('a reload that finds upstream unmoved keeps the features and takes the new meta', async (t) => {
+  const h = await harness(t);
+  const get = revalidatingDataset(0, { cacheDir: h.cacheDir, dataUrl: h.dataUrl, maxAgeMs: 0 });
+
+  const first = await get();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  const second = await get();
+
+  assert.equal(h.hits, 2);
+  assert.equal(second.features, first.features, 'the array the title tables are keyed on');
+  assert.notEqual(second.meta, first.meta);
+  assert.ok(Date.parse(second.meta.fetchedAt) > Date.parse(first.meta.fetchedAt));
 });

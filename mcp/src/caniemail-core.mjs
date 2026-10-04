@@ -268,6 +268,61 @@ export async function loadDataset(options = {}) {
   });
 }
 
+/**
+ * A dataset for a process that outlives one call, reloaded once it is
+ * `revalidateMs` old.
+ *
+ * A reload in progress is shared. Calls that arrive while one is running wait
+ * for it rather than starting their own, or an agent firing three tools after a
+ * quiet quarter of an hour would pay for three loads and keep one.
+ *
+ * @param {number} revalidateMs
+ * @param {Parameters<typeof loadDataset>[0]} [loadOptions]
+ * @returns {() => Promise<Dataset>}
+ */
+export function revalidatingDataset(revalidateMs, loadOptions = {}) {
+  let loaded = null;
+  let reloading = null;
+
+  async function reload() {
+    try {
+      const next = await loadDataset(loadOptions);
+      const held = loaded?.value;
+
+      // A revalidation that finds upstream unmoved keeps the *same* feature
+      // array. That array is the WeakMap key `buildTitleTables` memoises on and
+      // `loadDataset` returns a fresh one every time, so adopting `next`
+      // wholesale discards title tables that describe data identical to the
+      // data replacing it.
+      //
+      // Worth about 1ms per revalidation, and no more than that. The re-parse
+      // and re-index still happen (~12ms from a warm disk cache). It is kept
+      // for saying something true, that unmoved data is the same dataset, at no
+      // runtime cost.
+      //
+      // The new `meta` is adopted regardless, and that is the part that has to
+      // be right: it carries `source` and `fetchedAt`, so keeping the old
+      // object outright would report a `fetchedAt` from a quarter of an hour
+      // ago and call a just-revalidated answer stale.
+      const unmoved =
+        held &&
+        held.meta.lastUpdate === next.meta.lastUpdate &&
+        held.meta.featureCount === next.meta.featureCount;
+
+      loaded = { value: unmoved ? { ...held, meta: next.meta } : next, at: Date.now() };
+      return loaded.value;
+    } finally {
+      reloading = null;
+    }
+  }
+
+  return () => {
+    if (loaded && Date.now() - loaded.at < revalidateMs) return Promise.resolve(loaded.value);
+    reloading ??= reload();
+    return reloading;
+  };
+}
+
 /* -------------------------------------------------------------------------- */
 /* Client globs                                                                */
 /* -------------------------------------------------------------------------- */
