@@ -18,6 +18,20 @@
  * vendored copy, edit this file and run `make sync-core`.
  */
 
+import {
+  ADJACENT_SIBLING,
+  ATTRIBUTE,
+  CHAINING,
+  CHILD,
+  CLASS,
+  DESCENDANT,
+  GENERAL_SIBLING,
+  GROUPING,
+  ID,
+  TYPE,
+  UNIVERSAL,
+} from './selector-shapes.mjs';
+
 /* -------------------------------------------------------------------------- */
 /* Hardcoded shape exceptions                                                  */
 /* -------------------------------------------------------------------------- */
@@ -179,19 +193,25 @@ const IMAGE_MIME_TITLES = new Map(Object.entries({
   'image/webp': 'webP image format',
 }));
 
-/** Titles that name a selector shape rather than anything textual. */
-export const SELECTOR_SHAPE_TITLES = [
-  'Adjacent sibling combinator',
-  'Attribute selector',
-  'Chaining selectors',
-  'Child combinator',
-  'Class selector',
-  'Descendant combinator',
-  'General sibling combinator',
-  'Grouping selectors',
-  'ID selector',
-  'Type selector',
-  'Universal selector *',
+/**
+ * Titles that name a selector shape rather than anything textual.
+ *
+ * Imported rather than spelled out again: `detect.mjs` looks up the shapes
+ * `analyzeSelector` reports in this set, so a second spelling that drifted
+ * would stop a shape being detected without any error.
+ */
+const SELECTOR_SHAPE_TITLES = [
+  ADJACENT_SIBLING,
+  ATTRIBUTE,
+  CHAINING,
+  CHILD,
+  CLASS,
+  DESCENDANT,
+  GENERAL_SIBLING,
+  GROUPING,
+  ID,
+  TYPE,
+  UNIVERSAL,
 ];
 
 /** Titles raised by a construct with no name of its own. */

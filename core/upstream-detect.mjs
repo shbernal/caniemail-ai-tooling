@@ -55,6 +55,3 @@ export function upstreamDetect({ html, css }) {
   }
   return detected;
 }
-
-/** The titles upstream can never report, whatever the markup. */
-export { bundledData as upstreamBundledData };

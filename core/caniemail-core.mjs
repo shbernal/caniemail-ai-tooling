@@ -25,7 +25,7 @@ import { homedir, tmpdir } from 'node:os';
 import { detectFeatures } from './detect.mjs';
 import bundledData from './data/caniemail.json' with { type: 'json' };
 
-export const DATA_URL = 'https://www.caniemail.com/api/data.json';
+const DATA_URL = 'https://www.caniemail.com/api/data.json';
 
 /**
  * The four verdicts caniemail's dataset actually distinguishes.

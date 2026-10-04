@@ -74,6 +74,9 @@
   failure as a tool error, as the other three tools do, instead of letting it
   escape as a protocol error.
 
+- `DATA_URL` is no longer exported from `caniemail-core.mjs`. Nothing used it
+  outside the module. To point `loadDataset` somewhere else, pass `dataUrl`.
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is
