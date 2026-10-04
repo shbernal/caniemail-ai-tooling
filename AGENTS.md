@@ -85,7 +85,11 @@ data/caniemail.json  the offline dataset snapshot
 ```
 
 - **Never edit a vendored copy directly.** Edit the core, then `make sync-core`.
-- `make check-vendor` fails the build on drift, dataset snapshot included.
+- `make check-vendor` fails the build on drift, dataset snapshot included,
+  and on any file in a vendor directory that is neither a core copy nor that
+  surface's adapter (`SURFACES` in the Makefile). Both publish paths ship the
+  directory whole, so a module dropped from `CORE_FILES` has to be `git rm`'d
+  from both surfaces too.
 - Files not in `CORE_FILES`, the tests and `upstream-detect.mjs`, are
   development-only and must never reach a surface.
 

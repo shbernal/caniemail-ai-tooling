@@ -11,7 +11,11 @@ CORE_FILES := \
 	selector-shapes.mjs \
 	data/caniemail.json
 
-VENDOR_DIRS := skill/scripts mcp/src
+# Each vendor directory, with the one file in it that is not a core copy: the
+# surface's own adapter. Together with CORE_FILES that is everything the
+# directory may hold, and both publish paths ship the directory whole.
+SURFACES := skill/scripts:caniemail.mjs mcp/src:server.mjs
+VENDOR_DIRS := $(foreach surface,$(SURFACES),$(firstword $(subst :, ,$(surface))))
 
 DATA_URL := https://www.caniemail.com/api/data.json
 
@@ -38,6 +42,8 @@ sync-core:
 # Both surfaces are thin adapters over one implementation; if a vendored copy
 # drifts from core/ they silently stop behaving the same way. The dataset
 # snapshot rides the same check, so a surface cannot ship a stale fallback.
+# The check runs both ways: a file that is neither a core copy nor the adapter
+# is what a module dropped from CORE_FILES leaves behind, and it would ship.
 check-vendor:
 	@status=0; \
 	for dir in $(VENDOR_DIRS); do \
@@ -46,6 +52,16 @@ check-vendor:
 				echo "DRIFT $$dir/$$file differs from core/$$file (run: make sync-core)"; \
 				status=1; \
 			}; \
+		done; \
+	done; \
+	for surface in $(SURFACES); do \
+		dir=$${surface%%:*}; \
+		for file in $$(cd "$$dir" && find . -type f | sed 's|^\./||'); do \
+			case " $(CORE_FILES) $${surface#*:} " in \
+				*" $$file "*) ;; \
+				*) echo "EXTRA $$dir/$$file is neither a core copy nor the adapter (run: git rm $$dir/$$file)"; \
+					status=1 ;; \
+			esac; \
 		done; \
 	done; \
 	[ $$status -eq 0 ] && echo "ok   $(words $(CORE_FILES)) files in each of: $(VENDOR_DIRS)"; \
