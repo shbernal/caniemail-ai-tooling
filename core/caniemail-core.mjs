@@ -304,10 +304,12 @@ export function expandClients(dataset, globs) {
     const text = String(glob);
     // A bare "*" means every client. Elsewhere a wildcard is confined to one
     // segment, so "outlook.*" cannot reach across the dot into another family.
+    // A run of stars is one star: n adjacent `[^.]*` match the same language as
+    // one, and backtrack exponentially in n on a subject they cannot match.
     const pattern =
       text === '*'
         ? /^.+$/
-        : new RegExp(`^${text.split('*').map(escapeRegExp).join('[^.]*')}$`);
+        : new RegExp(`^${text.replace(/\*+/g, '*').split('*').map(escapeRegExp).join('[^.]*')}$`);
     const hits = dataset.clients.filter((client) => pattern.test(client));
     if (hits.length === 0) unmatched.push(glob);
     for (const hit of hits) matched.add(hit);

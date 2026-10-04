@@ -213,6 +213,16 @@ test('a wildcard does not leak across the dot separator', () => {
   assert.ok(families.every((c) => c.split('.').length === 2));
 });
 
+test('a run of stars is one star, and fails fast when it matches nothing', () => {
+  // Each star used to compile to its own `[^.]*`, and n of them side by side
+  // backtrack exponentially: twenty stars took seconds per call, blocking the
+  // single-threaded server for every session on it.
+  assert.deepEqual(expandClients(dataset, ['gmail.**']), expandClients(dataset, ['gmail.*']));
+  const started = performance.now();
+  assert.throws(() => expandClients(dataset, ['*'.repeat(40) + 'x']), /No client matches/);
+  assert.ok(performance.now() - started < 100);
+});
+
 /* -------------------------------------------------------------------------- */
 /* search_features                                                             */
 /* -------------------------------------------------------------------------- */

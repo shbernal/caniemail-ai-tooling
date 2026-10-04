@@ -26,6 +26,12 @@
   such character before it, and the `<style>` block's CSS was measured from the
   wrong place.
 
+- A client glob made of repeated `*` no longer wedges the process. Each star
+  compiled to its own `[^.]*`, and side by side they backtrack exponentially on
+  a client they cannot match: twenty stars took seconds per call, and the MCP
+  server is single-threaded, so every session on it waited. A run of stars now
+  counts as one, which matches exactly the same clients.
+
 ## 0.2.2 - 2026-09-04
 
 - A live fetch now has to return something shaped like the dataset before it is
