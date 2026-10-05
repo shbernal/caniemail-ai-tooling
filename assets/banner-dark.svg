@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320" role="img" aria-labelledby="title desc">
+  <title id="title">caniemail-ai-tooling</title>
+  <desc id="desc">Email client compatibility for AI agents. A grid of email clients, each cell coloured by verdict: supported, unsupported, mitigated or untested.</desc>
+  <style>
+    .c{animation-duration:9s;animation-timing-function:ease-in-out;animation-iteration-count:infinite}
+    @keyframes r-vs{0%,100%{fill:#3fb950}2.5%{fill:#30363d}9%{fill:#3fb950}}
+    .vs{fill:#3fb950;animation-name:r-vs}
+    @keyframes r-vx{0%,100%{fill:#f85149}2.5%{fill:#30363d}9%{fill:#f85149}}
+    .vx{fill:#f85149;animation-name:r-vx}
+    @keyframes r-vm{0%,100%{fill:#d29922}2.5%{fill:#30363d}9%{fill:#d29922}}
+    .vm{fill:#d29922;animation-name:r-vm}
+    @keyframes r-vt{0%,100%{fill:#8b949e}2.5%{fill:#30363d}9%{fill:#8b949e}}
+    .vt{fill:#8b949e;animation-name:r-vt}
+    @keyframes sweep{
+      0%{opacity:0;transform:translateX(0)}
+      3%{opacity:1;transform:translateX(0)}
+      36%{opacity:1;transform:translateX(418px)}
+      40%,100%{opacity:0;transform:translateX(418px)}
+    }
+    .bar{opacity:0;animation:sweep 9s linear infinite}
+    @media (prefers-reduced-motion: reduce){.c,.bar{animation:none}}
+  </style>
+  <rect x="0.5" y="0.5" width="1279" height="319" rx="16" fill="#0d1117" stroke="#30363d"/>
+
+  <text x="64" y="118" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="44" font-weight="600" fill="#e6edf3">caniemail-ai-tooling</text>
+  <text x="64" y="160" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" fill="#9198a1">Email client compatibility for AI agents</text>
+  <rect x="64" y="182" width="96" height="30" rx="15" fill="#161b22" stroke="#30363d"/><text x="112" y="202" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#e6edf3">skill</text>
+  <rect x="172" y="182" width="140" height="30" rx="15" fill="#161b22" stroke="#30363d"/><text x="242" y="202" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#e6edf3">MCP server</text>
+  <g>
+    <rect x="64" y="249" width="12" height="12" rx="3" fill="#3fb950"/><text x="84" y="260" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#9198a1">supported</text>
+    <rect x="194.12" y="249" width="12" height="12" rx="3" fill="#f85149"/><text x="214.12" y="260" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#9198a1">unsupported</text>
+    <rect x="341.6" y="249" width="12" height="12" rx="3" fill="#d29922"/><text x="361.6" y="260" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#9198a1">mitigated</text>
+    <rect x="471.72" y="249" width="12" height="12" rx="3" fill="#8b949e"/><text x="491.72" y="260" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" fill="#9198a1">untested</text>
+  </g>
+
+  <rect x="730.5" y="65.5" width="493" height="189" rx="12" fill="#161b22" stroke="#30363d"/>
+  <g>
+    <rect class="c vt" x="754" y="89" width="28" height="28" rx="6" style="animation-delay:0s"/>
+    <rect class="c vx" x="792" y="89" width="28" height="28" rx="6" style="animation-delay:0.27s"/>
+    <rect class="c vm" x="830" y="89" width="28" height="28" rx="6" style="animation-delay:0.54s"/>
+    <rect class="c vs" x="868" y="89" width="28" height="28" rx="6" style="animation-delay:0.81s"/>
+    <rect class="c vs" x="906" y="89" width="28" height="28" rx="6" style="animation-delay:1.08s"/>
+    <rect class="c vt" x="944" y="89" width="28" height="28" rx="6" style="animation-delay:1.35s"/>
+    <rect class="c vs" x="982" y="89" width="28" height="28" rx="6" style="animation-delay:1.62s"/>
+    <rect class="c vs" x="1020" y="89" width="28" height="28" rx="6" style="animation-delay:1.89s"/>
+    <rect class="c vm" x="1058" y="89" width="28" height="28" rx="6" style="animation-delay:2.16s"/>
+    <rect class="c vt" x="1096" y="89" width="28" height="28" rx="6" style="animation-delay:2.43s"/>
+    <rect class="c vt" x="1134" y="89" width="28" height="28" rx="6" style="animation-delay:2.7s"/>
+    <rect class="c vx" x="1172" y="89" width="28" height="28" rx="6" style="animation-delay:2.97s"/>
+    <rect class="c vs" x="754" y="127" width="28" height="28" rx="6" style="animation-delay:0s"/>
+    <rect class="c vm" x="792" y="127" width="28" height="28" rx="6" style="animation-delay:0.27s"/>
+    <rect class="c vs" x="830" y="127" width="28" height="28" rx="6" style="animation-delay:0.54s"/>
+    <rect class="c vm" x="868" y="127" width="28" height="28" rx="6" style="animation-delay:0.81s"/>
+    <rect class="c vs" x="906" y="127" width="28" height="28" rx="6" style="animation-delay:1.08s"/>
+    <rect class="c vt" x="944" y="127" width="28" height="28" rx="6" style="animation-delay:1.35s"/>
+    <rect class="c vt" x="982" y="127" width="28" height="28" rx="6" style="animation-delay:1.62s"/>
+    <rect class="c vs" x="1020" y="127" width="28" height="28" rx="6" style="animation-delay:1.89s"/>
+    <rect class="c vs" x="1058" y="127" width="28" height="28" rx="6" style="animation-delay:2.16s"/>
+    <rect class="c vx" x="1096" y="127" width="28" height="28" rx="6" style="animation-delay:2.43s"/>
+    <rect class="c vx" x="1134" y="127" width="28" height="28" rx="6" style="animation-delay:2.7s"/>
+    <rect class="c vm" x="1172" y="127" width="28" height="28" rx="6" style="animation-delay:2.97s"/>
+    <rect class="c vs" x="754" y="165" width="28" height="28" rx="6" style="animation-delay:0s"/>
+    <rect class="c vs" x="792" y="165" width="28" height="28" rx="6" style="animation-delay:0.27s"/>
+    <rect class="c vm" x="830" y="165" width="28" height="28" rx="6" style="animation-delay:0.54s"/>
+    <rect class="c vx" x="868" y="165" width="28" height="28" rx="6" style="animation-delay:0.81s"/>
+    <rect class="c vx" x="906" y="165" width="28" height="28" rx="6" style="animation-delay:1.08s"/>
+    <rect class="c vs" x="944" y="165" width="28" height="28" rx="6" style="animation-delay:1.35s"/>
+    <rect class="c vs" x="982" y="165" width="28" height="28" rx="6" style="animation-delay:1.62s"/>
+    <rect class="c vx" x="1020" y="165" width="28" height="28" rx="6" style="animation-delay:1.89s"/>
+    <rect class="c vs" x="1058" y="165" width="28" height="28" rx="6" style="animation-delay:2.16s"/>
+    <rect class="c vs" x="1096" y="165" width="28" height="28" rx="6" style="animation-delay:2.43s"/>
+    <rect class="c vs" x="1134" y="165" width="28" height="28" rx="6" style="animation-delay:2.7s"/>
+    <rect class="c vm" x="1172" y="165" width="28" height="28" rx="6" style="animation-delay:2.97s"/>
+    <rect class="c vs" x="754" y="203" width="28" height="28" rx="6" style="animation-delay:0s"/>
+    <rect class="c vt" x="792" y="203" width="28" height="28" rx="6" style="animation-delay:0.27s"/>
+    <rect class="c vm" x="830" y="203" width="28" height="28" rx="6" style="animation-delay:0.54s"/>
+    <rect class="c vt" x="868" y="203" width="28" height="28" rx="6" style="animation-delay:0.81s"/>
+    <rect class="c vs" x="906" y="203" width="28" height="28" rx="6" style="animation-delay:1.08s"/>
+    <rect class="c vs" x="944" y="203" width="28" height="28" rx="6" style="animation-delay:1.35s"/>
+    <rect class="c vs" x="982" y="203" width="28" height="28" rx="6" style="animation-delay:1.62s"/>
+    <rect class="c vm" x="1020" y="203" width="28" height="28" rx="6" style="animation-delay:1.89s"/>
+    <rect class="c vx" x="1058" y="203" width="28" height="28" rx="6" style="animation-delay:2.16s"/>
+    <rect class="c vt" x="1096" y="203" width="28" height="28" rx="6" style="animation-delay:2.43s"/>
+    <rect class="c vs" x="1134" y="203" width="28" height="28" rx="6" style="animation-delay:2.7s"/>
+    <rect class="c vs" x="1172" y="203" width="28" height="28" rx="6" style="animation-delay:2.97s"/>
+  </g>
+  <rect class="bar" x="766" y="79" width="4" height="162" rx="2" fill="#a371f7"/>
+</svg>
