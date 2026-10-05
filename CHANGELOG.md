@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-10-05
 
 - `search_features` on the MCP server no longer rejects a category its schema
   did not know. The schema froze `html`, `css`, `image` and `others`, so a
@@ -93,6 +93,13 @@
 
 - `DATA_URL` is no longer exported from `caniemail-core.mjs`. Nothing used it
   outside the module. To point `loadDataset` somewhere else, pass `dataUrl`.
+
+- The bundled dataset snapshot is refreshed to upstream's 2026-09-16 update.
+  Gmail now reads as mitigated rather than unsupported for `image-svg` (the
+  image renders, rasterised to PNG) and, on iOS and Android, for
+  `html-meta-color-scheme` (only `light only` is honoured).
+
+- The MCP server depends on `@modelcontextprotocol/sdk` ^1.32.0.
 
 ## 0.2.2 - 2026-09-04
 
