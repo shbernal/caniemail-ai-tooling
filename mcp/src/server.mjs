@@ -97,6 +97,17 @@ const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value)
 // because the spec gives it meaning only for tools that write.
 const annotations = { readOnlyHint: true, openWorldHint: false };
 
+// How long a 2026-07-28 client may keep the tool list and the discover result
+// before asking again. Both are fixed for the life of the process: the roster
+// in the descriptions comes from the bundled snapshot, not the live data, so
+// only a new release changes them. Public, because nothing in either depends
+// on who asked. A 2025-era client never sees these fields.
+const DAY_MS = 24 * 60 * 60 * 1000;
+const cacheHints = {
+  'tools/list': { ttlMs: DAY_MS, cacheScope: 'public' },
+  'server/discover': { ttlMs: DAY_MS, cacheScope: 'public' },
+};
+
 /* -------------------------------------------------------------------------- */
 
 /**
@@ -111,7 +122,7 @@ function createServer() {
   // at the next release. `files` limits the tarball to `src` and `README.md`,
   // but npm always ships package.json at the package root, so `../` resolves
   // once installed exactly as it does here.
-  const server = new McpServer({ name: 'caniemail', version: pkg.version });
+  const server = new McpServer({ name: 'caniemail', version: pkg.version }, { cacheHints });
 
   server.registerTool(
     'lint_email',

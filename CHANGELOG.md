@@ -18,6 +18,10 @@
   but `server/discover` itself came back as "Method not found". Clients still
   on a 2025 revision are served exactly as before.
 
+- On 2026-07-28, `tools/list` and `server/discover` tell clients they may cache
+  the result publicly for a day. Neither changes while the server runs, and a
+  client that honours the hint stops listing the tools again on every session.
+
 ## 0.3.0 - 2026-10-05
 
 - `search_features` on the MCP server no longer rejects a category its schema

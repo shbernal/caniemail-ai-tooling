@@ -236,6 +236,11 @@ try {
     tools.result?.tools?.length === 4,
     tools.error?.message ?? `${tools.result?.tools?.length}`,
   );
+  check(
+    '2026-07-28: tools/list may be cached publicly',
+    tools.result?.ttlMs > 0 && tools.result?.cacheScope === 'public',
+    `ttlMs ${tools.result?.ttlMs}, ${tools.result?.cacheScope}`,
+  );
 
   const search = await modern.request('tools/call', {
     name: 'search_features',
