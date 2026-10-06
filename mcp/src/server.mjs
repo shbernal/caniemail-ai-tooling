@@ -94,10 +94,9 @@ const server = new McpServer({ name: 'caniemail', version: pkg.version });
 // clients the indentation alone was 16KB, roughly 4k tokens of whitespace.
 const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value) }] });
 
-const fail = (error) => ({
-  content: [{ type: 'text', text: error.message }],
-  isError: true,
-});
+// Handlers throw rather than build an error result. The SDK catches anything a
+// tool handler throws and returns its message as an `isError` result, which is
+// exactly what an agent needs to correct a slug, a glob or a category.
 
 /* -------------------------------------------------------------------------- */
 
@@ -131,15 +130,8 @@ server.registerTool(
         .describe('Include never-tested features as "unknown" findings. Default true.'),
     }),
   },
-  async ({ html, css, clients, include_untested }) => {
-    try {
-      return json(
-        lintEmail(await getDataset(), { html, css, clients, includeUntested: include_untested }),
-      );
-    } catch (error) {
-      return fail(error);
-    }
-  },
+  async ({ html, css, clients, include_untested }) =>
+    json(lintEmail(await getDataset(), { html, css, clients, includeUntested: include_untested })),
 );
 
 server.registerTool(
@@ -168,13 +160,8 @@ server.registerTool(
         ),
     }),
   },
-  async ({ feature, clients, version }) => {
-    try {
-      return json(checkFeatureSupport(await getDataset(), feature, clients, { version }));
-    } catch (error) {
-      return fail(error);
-    }
-  },
+  async ({ feature, clients, version }) =>
+    json(checkFeatureSupport(await getDataset(), feature, clients, { version })),
 );
 
 server.registerTool(
@@ -195,13 +182,8 @@ server.registerTool(
       limit: z.number().int().positive().optional().describe('Max results. Default 15.'),
     }),
   },
-  async ({ query, category, limit }) => {
-    try {
-      return json(searchFeatures(await getDataset(), query, { category, limit }));
-    } catch (error) {
-      return fail(error);
-    }
-  },
+  async ({ query, category, limit }) =>
+    json(searchFeatures(await getDataset(), query, { category, limit })),
 );
 
 server.registerTool(
@@ -214,16 +196,12 @@ server.registerTool(
     inputSchema: z.object({}),
   },
   async () => {
-    try {
-      const dataset = await getDataset();
-      return json({
-        clients: listClients(dataset),
-        count: dataset.clients.length,
-        data_source: dataset.meta,
-      });
-    } catch (error) {
-      return fail(error);
-    }
+    const dataset = await getDataset();
+    return json({
+      clients: listClients(dataset),
+      count: dataset.clients.length,
+      data_source: dataset.meta,
+    });
   },
 );
 
