@@ -98,6 +98,11 @@ const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value)
 // tool handler throws and returns its message as an `isError` result, which is
 // exactly what an agent needs to correct a slug, a glob or a category.
 
+// Every tool only reads, and only from one closed dataset. Saying so lets a
+// client run them without asking the user first. `idempotentHint` is left out
+// because the spec gives it meaning only for tools that write.
+const annotations = { readOnlyHint: true, openWorldHint: false };
+
 /* -------------------------------------------------------------------------- */
 
 server.registerTool(
@@ -120,6 +125,7 @@ server.registerTool(
       'against the clients you asked for: "*" means all of them and "outlook.*" means all the ' +
       'ones you asked for in that family, with client_count always the exact number. ' +
       'Per-severity advice is in the "guidance" legend rather than repeated on every finding.',
+    annotations,
     inputSchema: z.object({
       html: z.string().optional().describe('The email HTML. Inline styles are checked too.'),
       css: z.string().optional().describe('Standalone CSS, e.g. the contents of a <style> block.'),
@@ -145,6 +151,7 @@ server.registerTool(
       'or untested (no data; not the same as unsupported). Also returns the version the verdict ' +
       'came from, every version on record, and how stale the last test is. ' +
       'Feature slugs are not guessable — use search_features first.',
+    annotations,
     inputSchema: z.object({
       feature: z.string().describe('Feature slug, e.g. "css-display-flex", "css-border-radius".'),
       clients: CLIENT_ARG,
@@ -173,6 +180,7 @@ server.registerTool(
       'descriptions. Start here: slugs are not guessable — "rounded corners" is ' +
       '"css-border-radius" and flexbox is "css-display-flex". Returns identifiers only, never ' +
       'support data, so it is cheap to call speculatively.',
+    annotations,
     inputSchema: z.object({
       query: z.string().describe('Keywords, e.g. "flexbox", "dark mode", "rounded corners".'),
       category: z
@@ -193,6 +201,7 @@ server.registerTool(
     description:
       'The full roster of email clients with human-readable names. The same list is inlined in ' +
       'the other tools’ descriptions, so call this only if you need the display names.',
+    annotations,
     inputSchema: z.object({}),
   },
   async () => {

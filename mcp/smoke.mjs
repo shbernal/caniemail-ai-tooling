@@ -91,6 +91,13 @@ try {
     names.join(', '),
   );
 
+  check(
+    'every tool is annotated read-only and closed-world',
+    tools.result.tools.every(
+      (t) => t.annotations?.readOnlyHint === true && t.annotations?.openWorldHint === false,
+    ),
+  );
+
   const lintTool = tools.result.tools.find((t) => t.name === 'lint_email');
   check(
     'client roster is inlined in the tool schema',

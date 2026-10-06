@@ -8,6 +8,10 @@
   negotiating older protocol versions are still served. The skill is not
   affected.
 
+- The MCP tools are annotated `readOnlyHint: true` and `openWorldHint: false`.
+  None of them changes anything, and all of them answer from one dataset, so a
+  client that honours the hints can run them without asking first.
+
 ## 0.3.0 - 2026-10-05
 
 - `search_features` on the MCP server no longer rejects a category its schema
