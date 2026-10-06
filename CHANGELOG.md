@@ -12,6 +12,12 @@
   None of them changes anything, and all of them answer from one dataset, so a
   client that honours the hints can run them without asking first.
 
+- The MCP server now serves clients on the 2026-07-28 protocol revision, which
+  open with `server/discover` rather than an `initialize` handshake and carry
+  their protocol version on every request. It answered those requests before,
+  but `server/discover` itself came back as "Method not found". Clients still
+  on a 2025 revision are served exactly as before.
+
 ## 0.3.0 - 2026-10-05
 
 - `search_features` on the MCP server no longer rejects a category its schema

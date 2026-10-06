@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Drive the MCP server over a real stdio JSON-RPC session.
+ * Drive the MCP server over real stdio JSON-RPC sessions, one per protocol era.
  *
  * The core suite tests the implementation; this tests the transport, the tool
  * registrations, and the schemas — everything that only fails once a client is
@@ -21,47 +21,56 @@ const command =
     ? [process.execPath, join(here, 'src', 'server.mjs')]
     : process.argv.slice(separator + 1);
 
-const child = spawn(command[0], command.slice(1), {
-  stdio: ['pipe', 'pipe', 'inherit'],
-  env: { ...process.env },
-});
-
-let buffer = '';
-const pending = new Map();
-
-child.stdout.on('data', (chunk) => {
-  buffer += chunk;
-  let index;
-  while ((index = buffer.indexOf('\n')) !== -1) {
-    const line = buffer.slice(0, index).trim();
-    buffer = buffer.slice(index + 1);
-    if (!line) continue;
-    let message;
-    try {
-      message = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    const resolve = pending.get(message.id);
-    if (resolve) {
-      pending.delete(message.id);
-      resolve(message);
-    }
-  }
-});
-
-let nextId = 1;
-function request(method, params) {
-  const id = nextId++;
-  return new Promise((resolve, reject) => {
-    pending.set(id, resolve);
-    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
-    setTimeout(() => reject(new Error(`timed out waiting for ${method}`)), 30_000).unref();
+/**
+ * Spawn the server and speak line-delimited JSON-RPC to it. One process per
+ * session, because the server pins a connection to the protocol era its first
+ * message picks, so the 2025 and 2026-07-28 checks cannot share one.
+ */
+function openSession() {
+  const child = spawn(command[0], command.slice(1), {
+    stdio: ['pipe', 'pipe', 'inherit'],
+    env: { ...process.env },
   });
-}
 
-function notify(method, params) {
-  child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`);
+  let buffer = '';
+  const pending = new Map();
+
+  child.stdout.on('data', (chunk) => {
+    buffer += chunk;
+    let index;
+    while ((index = buffer.indexOf('\n')) !== -1) {
+      const line = buffer.slice(0, index).trim();
+      buffer = buffer.slice(index + 1);
+      if (!line) continue;
+      let message;
+      try {
+        message = JSON.parse(line);
+      } catch {
+        continue;
+      }
+      const resolve = pending.get(message.id);
+      if (resolve) {
+        pending.delete(message.id);
+        resolve(message);
+      }
+    }
+  });
+
+  let nextId = 1;
+  function request(method, params) {
+    const id = nextId++;
+    return new Promise((resolve, reject) => {
+      pending.set(id, resolve);
+      child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`);
+      setTimeout(() => reject(new Error(`timed out waiting for ${method}`)), 30_000).unref();
+    });
+  }
+
+  function notify(method, params) {
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`);
+  }
+
+  return { request, notify, close: () => child.kill() };
 }
 
 const checks = [];
@@ -73,6 +82,9 @@ function check(label, condition, detail = '') {
 function payload(response) {
   return JSON.parse(response.result.content[0].text);
 }
+
+const legacy = openSession();
+const { request, notify } = legacy;
 
 try {
   const init = await request('initialize', {
@@ -196,7 +208,47 @@ try {
     `${roster.count}`,
   );
 } finally {
-  child.kill();
+  legacy.close();
+}
+
+// A 2026-07-28 client opens with `server/discover` instead of `initialize`, and
+// sends its protocol version, identity and capabilities on every request.
+const modern = openSession();
+const envelope = {
+  _meta: {
+    'io.modelcontextprotocol/protocolVersion': '2026-07-28',
+    'io.modelcontextprotocol/clientInfo': { name: 'smoke', version: '0' },
+    'io.modelcontextprotocol/clientCapabilities': {},
+  },
+};
+
+try {
+  const discover = await modern.request('server/discover', envelope);
+  check(
+    '2026-07-28: server/discover offers the revision',
+    discover.result?.supportedVersions?.includes('2026-07-28'),
+    discover.error?.message ?? discover.result?.supportedVersions?.join(', '),
+  );
+
+  const tools = await modern.request('tools/list', envelope);
+  check(
+    '2026-07-28: tools/list returns the four tools',
+    tools.result?.tools?.length === 4,
+    tools.error?.message ?? `${tools.result?.tools?.length}`,
+  );
+
+  const search = await modern.request('tools/call', {
+    name: 'search_features',
+    arguments: { query: 'rounded corners', limit: 1 },
+    ...envelope,
+  });
+  check(
+    '2026-07-28: tools/call answers',
+    search.result && payload(search).results[0].slug === 'css-border-radius',
+    search.error?.message ?? payload(search).results[0].slug,
+  );
+} finally {
+  modern.close();
 }
 
 const failed = checks.filter((c) => !c.ok);
