@@ -10,7 +10,7 @@ updates:
   # Dependabot detects the workspace manifests in the parent directory and fails
   # the job as misconfigured (dependabot-core#11487).
   #
-  # `@modelcontextprotocol/sdk` is the dependency this exists for — it is pinned
+  # `@modelcontextprotocol/server` is the dependency this exists for — it is pinned
   # by the lockfile and a new minor would otherwise never surface. `caniemail` is
   # only a devDependency, but it is the differential suite's oracle, so a release
   # there is information about our own port, not just an upgrade to take.

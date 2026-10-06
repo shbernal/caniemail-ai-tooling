@@ -12,8 +12,8 @@
  * here answers one question and returns only what that question needs.
  */
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { McpServer } from '@modelcontextprotocol/server';
+import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { z } from 'zod';
 
 import {
@@ -121,7 +121,7 @@ server.registerTool(
       'against the clients you asked for: "*" means all of them and "outlook.*" means all the ' +
       'ones you asked for in that family, with client_count always the exact number. ' +
       'Per-severity advice is in the "guidance" legend rather than repeated on every finding.',
-    inputSchema: {
+    inputSchema: z.object({
       html: z.string().optional().describe('The email HTML. Inline styles are checked too.'),
       css: z.string().optional().describe('Standalone CSS, e.g. the contents of a <style> block.'),
       clients: CLIENT_ARG,
@@ -129,7 +129,7 @@ server.registerTool(
         .boolean()
         .optional()
         .describe('Include never-tested features as "unknown" findings. Default true.'),
-    },
+    }),
   },
   async ({ html, css, clients, include_untested }) => {
     try {
@@ -153,7 +153,7 @@ server.registerTool(
       'or untested (no data; not the same as unsupported). Also returns the version the verdict ' +
       'came from, every version on record, and how stale the last test is. ' +
       'Feature slugs are not guessable — use search_features first.',
-    inputSchema: {
+    inputSchema: z.object({
       feature: z.string().describe('Feature slug, e.g. "css-display-flex", "css-border-radius".'),
       clients: CLIENT_ARG,
       version: z
@@ -166,7 +166,7 @@ server.registerTool(
             'call. Only a version no requested client has at all is an error. The pin is echoed ' +
             'once as version_requested on the result.',
         ),
-    },
+    }),
   },
   async ({ feature, clients, version }) => {
     try {
@@ -186,14 +186,14 @@ server.registerTool(
       'descriptions. Start here: slugs are not guessable — "rounded corners" is ' +
       '"css-border-radius" and flexbox is "css-display-flex". Returns identifiers only, never ' +
       'support data, so it is cheap to call speculatively.',
-    inputSchema: {
+    inputSchema: z.object({
       query: z.string().describe('Keywords, e.g. "flexbox", "dark mode", "rounded corners".'),
       category: z
         .string()
         .optional()
         .describe(`Restrict to one category: ${CATEGORIES.join(', ')}.`),
       limit: z.number().int().positive().optional().describe('Max results. Default 15.'),
-    },
+    }),
   },
   async ({ query, category, limit }) => {
     try {
@@ -211,7 +211,7 @@ server.registerTool(
     description:
       'The full roster of email clients with human-readable names. The same list is inlined in ' +
       'the other tools’ descriptions, so call this only if you need the display names.',
-    inputSchema: {},
+    inputSchema: z.object({}),
   },
   async () => {
     try {

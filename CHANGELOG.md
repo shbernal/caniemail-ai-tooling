@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- The MCP server moves to v2 of the MCP TypeScript SDK, which replaces the
+  single `@modelcontextprotocol/sdk` package with `@modelcontextprotocol/server`
+  ^2.3.1. The tools, their schemas and their output are unchanged, and clients
+  negotiating older protocol versions are still served. The skill is not
+  affected.
+
 ## 0.3.0 - 2026-10-05
 
 - `search_features` on the MCP server no longer rejects a category its schema
