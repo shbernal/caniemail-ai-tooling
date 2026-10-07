@@ -130,6 +130,22 @@ test('at-rules match by name, and media features by prelude', () => {
   );
 });
 
+test('a media feature matches as a whole token, never a substring', () => {
+  const HOVER = '@media (hover), @media (any-hover)';
+  assert.ok(matchAtRule(tables, 'media', '(hover: hover)').includes(HOVER));
+  assert.ok(matchAtRule(tables, 'media', 'screen and ( ANY-HOVER )').includes(HOVER));
+  assert.deepEqual(matchAtRule(tables, 'media', '(orientation-x: 1)'), ['@media']);
+  assert.deepEqual(matchAtRule(tables, 'media', '(any-hoverx)'), ['@media']);
+  assert.deepEqual(matchAtRule(tables, 'media', '(prefers-color-scheme-x)'), ['@media']);
+  // caniemail tested the boolean form only, so a range form has no verdict.
+  assert.deepEqual(matchAtRule(tables, 'media', '(-webkit-min-device-pixel-ratio: 2)'), ['@media']);
+  assert.ok(
+    matchAtRule(tables, 'media', 'screen and (-webkit-device-pixel-ratio)').includes(
+      '@media (-webkit-device-pixel-ratio)',
+    ),
+  );
+});
+
 test('pseudo-classes and pseudo-elements match by name', () => {
   assert.deepEqual(matchPseudo(tables, 'hover'), [':hover']);
   assert.deepEqual(matchPseudo(tables, 'after'), ['::after']);

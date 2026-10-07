@@ -312,7 +312,7 @@ function createTables(features) {
     /* CSS ---------------------------------------------------------------- */
 
     // "@media" -> "media". Media-feature titles keep their parenthesised part,
-    // which `matchAtRule` matches against the at-rule prelude.
+    // which `matchAtRule` matches against the features in the at-rule prelude.
     atRules: css
       .filter((t) => t.startsWith('@'))
       .map((title) => ({
@@ -532,22 +532,42 @@ export function matchUnits(tables, propertyValue) {
  * Titles matched by an at-rule.
  *
  * `@media` matches on the name alone. A media-feature title such as
- * `@media (prefers-color-scheme)` additionally requires that feature to appear
- * in the at-rule's prelude, which is what makes those five titles reachable —
- * upstream compared them against bare node type names, so they never matched.
+ * `@media (prefers-color-scheme)` additionally requires one of the prelude's
+ * media features to be that feature, which is what makes those five titles
+ * reachable — upstream compared them against bare node type names, so they
+ * never matched.
+ *
+ * A feature is a whole token, not a substring: `(orientation-x)` is not
+ * `(orientation)`, and `(any-hover)` does not contain `(hover)`. Nor is a
+ * `min-`/`max-` range form the bare feature. caniemail tested
+ * `(-webkit-device-pixel-ratio)` alone, so `-webkit-min-device-pixel-ratio`
+ * carries no verdict of its own and reports only `@media`.
  *
  * @param {TitleTables} tables
  * @param {string} name
  * @param {string} [prelude]
  */
 export function matchAtRule(tables, name, prelude = '') {
+  const features = mediaFeatures(prelude);
   const titles = [];
   for (const rule of tables.atRules) {
     if (!rule.names.includes(name)) continue;
-    if (rule.features.length > 0 && !rule.features.some((f) => prelude.includes(f))) continue;
+    if (rule.features.length > 0 && !rule.features.some((f) => features.has(f))) continue;
     titles.push(rule.title);
   }
   return titles;
+}
+
+/**
+ * The media-feature names in an at-rule prelude, lowercased: the name opening
+ * each parenthesised test, up to its `:`, its `)` or whitespace.
+ *
+ * @param {string} prelude
+ */
+function mediaFeatures(prelude) {
+  return new Set(
+    [...prelude.matchAll(/\(\s*([-a-z0-9]+)(?=[\s:)])/gi)].map((m) => m[1].toLowerCase()),
+  );
 }
 
 /**

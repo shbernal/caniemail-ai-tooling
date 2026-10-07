@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- `lint_email` matches a media feature in an `@media` prelude as a whole name
+  rather than a substring, so `(orientation-x)` no longer reports
+  `@media (orientation)` and nothing merely containing `hover` reports the hover
+  title. A `min-`/`max-` form such as `-webkit-min-device-pixel-ratio` still
+  reports only `@media`: caniemail tested the bare feature, and its verdict does
+  not carry over. Both surfaces.
+
 - A fetch of the live dataset that fails fast, as it does with no network, no
   longer keeps the process alive for the rest of the 10-second fetch timeout. A
   skill CLI run offline used to print its answer and then wait that long before
