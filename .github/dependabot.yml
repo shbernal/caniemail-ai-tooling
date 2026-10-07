@@ -18,6 +18,14 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # `@types/node` describes the Node the code runs on, and the floor is
+      # Node 24. A newer major types APIs that a supported runtime lacks, so
+      # `make typecheck` would pass code that fails on Node 24. Its major moves
+      # when the `engines` floor does, by hand.
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
     groups:
       # Routine bumps arrive as one PR that CI either passes or does not.
       # Majors are deliberately left out of the group: an SDK major changes the
