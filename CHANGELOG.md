@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 - 2026-10-08
 
 - An unclosed quote inside an attribute selector no longer hides the rest of
   the selector from `lint_email`: `a[title="x] > b` now reports the child
