@@ -264,10 +264,12 @@ export async function loadDataset(options = {}) {
     }
 
     try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch(dataUrl, { signal: controller.signal });
-      clearTimeout(timer);
+      // One signal for the headers and the body alike, so a server that sends
+      // headers and then stalls is bounded too. It is unref'd as well: a fetch
+      // that fails fast leaves nothing behind to hold the process open, where a
+      // plain `setTimeout` kept every offline CLI run alive for `timeoutMs`
+      // after its answer had been printed.
+      const response = await fetch(dataUrl, { signal: AbortSignal.timeout(timeoutMs) });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const raw = await response.json();
       // Parsing as JSON is not evidence of being the dataset, and this throw is

@@ -12,7 +12,7 @@
  * The rule they look like they break exists so a caniemail.com outage cannot
  * read as a broken commit. A `node:http` server on 127.0.0.1 has no external
  * dependency and is completely deterministic; what it buys is that the genuine
- * `fetch`, the genuine `AbortController` timeout, real HTTP status handling and
+ * `fetch`, the genuine abort timeout, real HTTP status handling and
  * real JSON parsing are all under test, where injecting a fake `fetch` would
  * have replaced the thing being tested with the test's own idea of it. Every
  * failure mode below is one line of server, and none of them is reachable at
@@ -22,6 +22,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
@@ -313,7 +314,7 @@ test(
   'a server that accepts the connection and says nothing hits the timeout',
   { timeout: 5_000 },
   async (t) => {
-    // Never responds. Without the AbortController this hangs for as long as the
+    // Never responds. Without the abort timeout this hangs for as long as the
     // peer keeps the socket open, which for an MCP server means the editor's
     // first tool call never returns.
     const h = await harness(t, () => {});
@@ -326,6 +327,62 @@ test(
     assert.ok(elapsed < 5_000, `fell back after ${elapsed}ms, so the abort fired`);
   },
 );
+
+// The same defect one step later: headers arrive, the body never finishes. A
+// timer cleared once `fetch` resolves leaves `response.json()` unbounded.
+test(
+  'a server that stalls part-way through the body hits the timeout',
+  { timeout: 5_000 },
+  async (t) => {
+    const h = await harness(t, (_request, response) => {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.write('{"data":[');
+    });
+
+    const dataset = await h.load({ timeoutMs: 250 });
+
+    assert.equal(dataset.meta.source, 'bundled');
+    assert.match(dataset.meta.warning ?? '', /Live fetch and cache both unavailable/);
+  },
+);
+
+// A refused connection fails at once, so the answer is never late. What was late
+// was the exit: a timer left armed after `fetch` rejected kept the event loop
+// alive for the rest of `timeoutMs`, which is every offline CLI run. Only a
+// separate process can see that, since the test runner's own loop is busy anyway.
+test('a fetch that fails fast does not hold the process open', { timeout: 10_000 }, async () => {
+  // Bound and closed again, so nothing is listening there: a reliable refusal.
+  const probe = createServer();
+  probe.listen(0, '127.0.0.1');
+  await once(probe, 'listening');
+  const { port } = /** @type {import('node:net').AddressInfo} */ (probe.address());
+  await new Promise((resolve) => probe.close(resolve));
+
+  const cacheDir = await mkdtemp(join(tmpdir(), 'caniemail-cache-'));
+  try {
+    const script = `
+      const { loadDataset } = await import(${JSON.stringify(new URL('./caniemail-core.mjs', import.meta.url).href)});
+      const dataset = await loadDataset({
+        cacheDir: ${JSON.stringify(cacheDir)},
+        dataUrl: 'http://127.0.0.1:${port}/',
+        timeoutMs: 5000,
+      });
+      process.stdout.write(dataset.meta.source);
+    `;
+    const started = Date.now();
+    const child = spawn(process.execPath, ['--input-type=module', '-e', script]);
+    let stdout = '';
+    child.stdout.on('data', (chunk) => (stdout += chunk));
+    const [code] = await once(child, 'exit');
+    const elapsed = Date.now() - started;
+
+    assert.equal(code, 0);
+    assert.equal(stdout, 'bundled');
+    assert.ok(elapsed < 3_000, `exited after ${elapsed}ms, against a 5000ms timeout`);
+  } finally {
+    await rm(cacheDir, { recursive: true, force: true });
+  }
+});
 
 /* -------------------------------------------------------------------------- */
 /* Offline                                                                     */

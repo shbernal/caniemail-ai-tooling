@@ -325,7 +325,7 @@ is the review artifact.
   `meta.warning` come from, every path through it is a failure path, and a
   stubbed `fetch` would have replaced the code under test with the test's own
   idea of it. The loopback server keeps the real `fetch`, the real
-  `AbortController` timeout, real status handling and real JSON parsing, and
+  abort timeout, real status handling and real JSON parsing, and
   stages a 500, a garbage body or a hang in one line each. The `dataUrl` option
   that makes it possible is a real option (a mirror, a proxy), not a test hook.
 - One dataset snapshot is committed, at `core/data/caniemail.json`, and vendored

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- A fetch of the live dataset that fails fast, as it does with no network, no
+  longer keeps the process alive for the rest of the 10-second fetch timeout. A
+  skill CLI run offline used to print its answer and then wait that long before
+  exiting. The timeout now also bounds the response body, so a server that sends
+  headers and then stalls falls back to the cache or the bundled snapshot instead
+  of hanging. Both surfaces.
+
 - The MCP server moves to v2 of the MCP TypeScript SDK, which replaces the
   single `@modelcontextprotocol/sdk` package with `@modelcontextprotocol/server`
   ^2.3.1. The tools, their schemas and their output are unchanged, and clients
