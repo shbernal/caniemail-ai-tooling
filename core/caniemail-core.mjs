@@ -18,7 +18,6 @@
  */
 
 import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 
@@ -242,25 +241,14 @@ export async function loadDataset(options = {}) {
 
   if (!offline) {
     // A fresh cache short-circuits the fetch; anything else re-checks the network.
-    try {
-      if (existsSync(cacheFile)) {
-        const cached = JSON.parse(await readFile(cacheFile, 'utf8'));
-        const age = Date.now() - Date.parse(cached.fetchedAt);
-        if (Number.isFinite(age) && age < maxAgeMs) {
-          // Misshapen is corrupt. A cache written before this check existed is
-          // still on disk, so the guard on the fetch below is not enough on its
-          // own to end an ongoing poisoning — this is the line that does.
-          if (!isDatasetShaped(cached.raw))
-            throw new Error('cached dataset is not shaped like one');
-          return indexDataset(cached.raw, {
-            source: 'cache',
-            fetchedAt: cached.fetchedAt,
-            warning: null,
-          });
-        }
-      }
-    } catch {
-      // Corrupt cache is not an error condition; fall through and refetch.
+    const fresh = await readCache(cacheFile);
+    const age = fresh ? Date.now() - Date.parse(fresh.fetchedAt) : NaN;
+    if (fresh && Number.isFinite(age) && age < maxAgeMs) {
+      return indexDataset(fresh.raw, {
+        source: 'cache',
+        fetchedAt: fresh.fetchedAt,
+        warning: null,
+      });
     }
 
     try {
@@ -281,42 +269,19 @@ export async function loadDataset(options = {}) {
       // with every other process on this machine.
       if (!isDatasetShaped(raw)) throw new Error('response is not shaped like the dataset');
       const fetchedAt = new Date().toISOString();
-      try {
-        // Written to a per-process temp file and renamed, because the two
-        // surfaces share one cache directory: an MCP server and a CLI run can
-        // refresh at the same moment, and a plain write interleaves them into a
-        // truncated file. The corrupt-cache guard above catches that, so the
-        // cost was a redundant fetch rather than a failure — but rename is
-        // atomic and this is one line.
-        await mkdir(cacheDir, { recursive: true });
-        const temporary = `${cacheFile}.${process.pid}.tmp`;
-        try {
-          await writeFile(temporary, JSON.stringify({ fetchedAt, raw }));
-          await rename(temporary, cacheFile);
-        } catch (error) {
-          await rm(temporary, { force: true }).catch(() => {});
-          throw error;
-        }
-      } catch {
-        // An unwritable cache degrades performance, not correctness.
-      }
+      await writeCache(cacheDir, cacheFile, { fetchedAt, raw });
       return indexDataset(raw, { source: 'live', fetchedAt, warning: null });
     } catch {
       // Fall through to cache-then-bundle.
     }
 
-    try {
-      if (existsSync(cacheFile)) {
-        const cached = JSON.parse(await readFile(cacheFile, 'utf8'));
-        if (!isDatasetShaped(cached.raw)) throw new Error('cached dataset is not shaped like one');
-        return indexDataset(cached.raw, {
-          source: 'cache',
-          fetchedAt: cached.fetchedAt,
-          warning: 'Live fetch failed; using cached data, which may be out of date.',
-        });
-      }
-    } catch {
-      // Fall through to the bundle.
+    const stale = await readCache(cacheFile);
+    if (stale) {
+      return indexDataset(stale.raw, {
+        source: 'cache',
+        fetchedAt: stale.fetchedAt,
+        warning: 'Live fetch failed; using cached data, which may be out of date.',
+      });
     }
   }
 
@@ -330,6 +295,51 @@ export async function loadDataset(options = {}) {
       ? 'Offline mode: using the dataset snapshot bundled with this tool, which lags the site.'
       : 'Live fetch and cache both unavailable; using the dataset snapshot bundled with this tool, which lags the site.',
   });
+}
+
+/**
+ * The disk cache, or `null` when there is none worth using: missing,
+ * unparseable and misshapen are all the same answer, and none is an error.
+ *
+ * Misshapen is corrupt. A cache written before the shape check existed is still
+ * on disk, so the guard on the fetch is not enough on its own to end an ongoing
+ * poisoning — checking here, on every read, is what does.
+ *
+ * @param {string} cacheFile
+ * @returns {Promise<{ raw: RawDataset, fetchedAt: string } | null>}
+ */
+async function readCache(cacheFile) {
+  try {
+    const cached = JSON.parse(await readFile(cacheFile, 'utf8'));
+    return isDatasetShaped(cached.raw) ? cached : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Write the cache, or quietly fail to: an unwritable cache degrades
+ * performance, not correctness.
+ *
+ * Written to a per-process temp file and renamed, because the two surfaces
+ * share one cache directory: an MCP server and a CLI run can refresh at the
+ * same moment, and a plain write interleaves them into a truncated file. The
+ * shape check in `readCache` catches that, so the cost was a redundant fetch
+ * rather than a failure — but rename is atomic and this is one line.
+ *
+ * @param {string} cacheDir
+ * @param {string} cacheFile
+ * @param {{ fetchedAt: string, raw: RawDataset }} record
+ */
+async function writeCache(cacheDir, cacheFile, record) {
+  const temporary = `${cacheFile}.${process.pid}.tmp`;
+  try {
+    await mkdir(cacheDir, { recursive: true });
+    await writeFile(temporary, JSON.stringify(record));
+    await rename(temporary, cacheFile);
+  } catch {
+    await rm(temporary, { force: true }).catch(() => {});
+  }
 }
 
 /**
