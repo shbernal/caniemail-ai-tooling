@@ -34,6 +34,7 @@ make test-network   # adds the live-fetch test
 make smoke          # drives the MCP server over real stdio JSON-RPC
 make check-vendor   # the vendored copies match the core, byte for byte
 make lint           # oxlint over the core and both adapters
+make typecheck      # tsc over the same paths, checking the JSDoc types
 make check-format   # oxfmt over the same paths; `make format` fixes it
 ```
 
@@ -45,7 +46,7 @@ CI runs the first three on Node 24 and on the current release, on every push and
 pull request.
 `test-network` runs nightly instead, on its own job, so an outage at
 caniemail.com cannot fail your patch. The pre-commit hook runs `make test`,
-`make check-vendor`, `make lint` and `make check-format`, so a stale vendored copy cannot be
+`make check-vendor`, `make lint`, `make typecheck` and `make check-format`, so a stale vendored copy cannot be
 committed.
 
 ## Edit the core, never a copy

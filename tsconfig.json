@@ -1,0 +1,29 @@
+{
+  // Type-checks the JSDoc in plain ESM. Nothing is emitted: the shipped files
+  // are the source, byte-identical across core/ and both surfaces, and a
+  // compile step would end that. TypeScript is a devDependency for this check
+  // and reaches neither artifact.
+  //
+  // Same paths as `make lint`: the core and each surface's adapter, not the
+  // vendored copies. The adapters import their copies, which pulls those into
+  // the program anyway, and check-vendor makes them the same files as core/.
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "target": "es2024",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "resolveJsonModule": true,
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": [
+    "core/**/*.mjs",
+    "skill/scripts/caniemail.mjs",
+    "mcp/src/server.mjs",
+    "mcp/smoke.mjs",
+    ".github/scripts/*.mjs"
+  ]
+}

@@ -98,6 +98,13 @@ copies need no build step on either surface. Keep it that way. A compile step
 would have to run in both places and the vendoring guarantee would stop being a
 byte comparison.
 
+The JSDoc is checked rather than decorative. `make typecheck` runs `tsc` with
+`checkJs` and `strict` over the same paths as `make lint`, and emits nothing:
+TypeScript is a root devDependency and reaches neither artifact. A cast in the
+core (`/** @type {X} */ (value)`) is a claim the checker cannot verify, so each
+one carries a comment saying why it holds. `@ts-expect-error` belongs in tests
+that pass a wrong type on purpose, and nowhere else.
+
 ## Commands
 
 ```bash
@@ -107,6 +114,7 @@ make test-network   # adds the live-fetch test
 make sync-core      # copy the core into both surfaces, after any core edit
 make check-vendor   # verify the vendored copies match
 make lint           # oxlint over the core and both adapters, not the copies
+make typecheck      # tsc over the same paths, checking the JSDoc, emitting nothing
 make format         # oxfmt over the same paths, then sync-core
 make check-format   # fail on anything make format would change
 make goldens        # regenerate fixtures/expected after an intended change
@@ -116,10 +124,11 @@ make smoke          # drive the MCP server over real stdio JSON-RPC
 
 Run `make sync-core test check-vendor` before committing any core change.
 
-`make test`, `make check-vendor`, `make lint` and `make check-format` also run
-as a lefthook `pre-commit` hook, so a forgotten `make sync-core` fails the commit
-rather than reaching a surface. Install the hooks once per clone with `pnpm
-install && pnpm exec lefthook install`; the same four gates run again in CI.
+`make test`, `make check-vendor`, `make lint`, `make typecheck` and `make
+check-format` also run as a lefthook `pre-commit` hook, so a forgotten `make
+sync-core` fails the commit rather than reaching a surface. Install the hooks
+once per clone with `pnpm install && pnpm exec lefthook install`; the same five
+gates run again in CI.
 The hook checks formatting and never rewrites the tree: like `make sync-core`,
 which is deliberately *not* automated, a change to what is committed is a
 decision to record in the commit, not a side effect of it. `make format` is the

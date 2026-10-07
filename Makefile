@@ -19,12 +19,13 @@ VENDOR_DIRS := $(foreach surface,$(SURFACES),$(firstword $(subst :, ,$(surface))
 
 DATA_URL := https://www.caniemail.com/api/data.json
 
-.PHONY: sync-core check-vendor lint format check-format test test-network goldens refresh-data smoke help
+.PHONY: sync-core check-vendor lint typecheck format check-format test test-network goldens refresh-data smoke help
 
 help:
 	@echo "sync-core     copy the core modules and dataset into both surfaces"
 	@echo "check-vendor  verify the vendored copies match"
 	@echo "lint          run oxlint over the core and both adapters"
+	@echo "typecheck     check the JSDoc types with tsc, emitting nothing"
 	@echo "format        run oxfmt over the same paths, then sync-core"
 	@echo "check-format  fail if any of those paths is not formatted"
 	@echo "test          run the core suite (no network)"
@@ -77,6 +78,11 @@ LINT_PATHS := core $(foreach surface,$(SURFACES),$(subst :,/,$(surface))) mcp/sm
 
 lint:
 	pnpm exec oxlint --deny-warnings $(LINT_PATHS)
+
+# tsc over the paths in tsconfig.json, which are LINT_PATHS. It reads the JSDoc
+# and emits nothing: the shipped files stay the source, with no build step.
+typecheck:
+	pnpm exec tsc -p .
 
 # Same paths as lint, for the same reason. The copies are kept formatted by
 # sync-core rather than by oxfmt, which is why `format` ends with it: a format
