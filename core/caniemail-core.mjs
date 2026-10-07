@@ -33,13 +33,16 @@ const DATA_URL = 'https://www.caniemail.com/api/data.json';
  * which destroys the distinction between "works with a documented workaround"
  * and "nobody has ever tested this". Those demand opposite actions from an
  * agent, so they stay separate here.
- *
- * @typedef {'supported'|'unsupported'|'mitigated'|'untested'} Verdict
  */
 export const SUPPORTED = /** @type {const} */ ('supported');
 export const UNSUPPORTED = /** @type {const} */ ('unsupported');
 export const MITIGATED = /** @type {const} */ ('mitigated');
 export const UNTESTED = /** @type {const} */ ('untested');
+
+/** Every verdict, in the order a count of them is reported. */
+const VERDICTS = /** @type {const} */ ([SUPPORTED, UNSUPPORTED, MITIGATED, UNTESTED]);
+
+/** @typedef {(typeof VERDICTS)[number]} Verdict */
 
 /**
  * The verdicts a lint reports, which is every one but `supported`.
@@ -692,8 +695,25 @@ export function checkFeatureSupport(dataset, slug, clientGlobs, options = {}) {
  * @returns {Record<Verdict, number>}
  */
 function summarise(support) {
-  const counts = { supported: 0, unsupported: 0, mitigated: 0, untested: 0 };
-  for (const entry of support) counts[entry.verdict] += 1;
+  return countBy(
+    VERDICTS,
+    support.map((entry) => entry.verdict),
+  );
+}
+
+/**
+ * How many of `values` are each of `keys`, with every key present and in order.
+ *
+ * @template {string} K
+ * @param {readonly K[]} keys
+ * @param {K[]} values
+ * @returns {Record<K, number>}
+ */
+function countBy(keys, values) {
+  // Every key is written by the `map`, so the record is complete; `fromEntries`
+  // is typed as keyed by any string, which is all the cast narrows.
+  const counts = /** @type {Record<K, number>} */ (Object.fromEntries(keys.map((key) => [key, 0])));
+  for (const value of values) counts[value] += 1;
   return counts;
 }
 
@@ -871,6 +891,7 @@ export function lintEmail(dataset, options) {
   if (!html && !css) throw new Error('Provide html, css, or both.');
 
   const clients = expandClients(dataset, clientGlobs);
+  const summariseClients = clientSummariser(clients);
   const detected = detectFeatures(dataset, { html, css });
 
   const findings = [];
@@ -925,7 +946,7 @@ export function lintEmail(dataset, options) {
         feature: feature.slug,
         severity: SEVERITY_BY_VERDICT[verdict],
         verdict,
-        clients_affected: summariseClients(affected, clients),
+        clients_affected: summariseClients(affected),
         client_count: affected.length,
         notes: verdict === UNTESTED ? [] : [...bucket.notes],
         // Stays on the finding, unlike everything else that does not vary by
@@ -941,11 +962,13 @@ export function lintEmail(dataset, options) {
 
   // Hard failures first, then breadth of impact — an agent reading top-down
   // fixes the most damaging thing first.
-  const order = { error: 0, warning: 1, unknown: 2 };
-  findings.sort((a, b) => order[a.severity] - order[b.severity] || b.client_count - a.client_count);
+  const rank = (/** @type {Severity} */ severity) => SEVERITIES.indexOf(severity);
+  findings.sort((a, b) => rank(a.severity) - rank(b.severity) || b.client_count - a.client_count);
 
-  const counts = { error: 0, warning: 0, unknown: 0 };
-  for (const finding of findings) counts[finding.severity] += 1;
+  const counts = countBy(
+    SEVERITIES,
+    findings.map((finding) => finding.severity),
+  );
 
   return {
     clients_checked: clients,
@@ -987,18 +1010,29 @@ export function lintEmail(dataset, options) {
  * three of seven Outlook clients rolls up to nothing — so on a realistic lint it
  * is the `["*"]` case that does most of the work.
  *
- * @param {string[]} affected
+ * Built once per lint, because the checked set is: the per-family counts it
+ * compresses against are the same for every finding.
+ *
  * @param {string[]} checked
+ * @returns {(affected: string[]) => string[]}
  */
-function summariseClients(affected, checked) {
-  if (checked.length > 1 && affected.length === checked.length) return ['*'];
-
+function clientSummariser(checked) {
   /** @type {Map<string, number>} */
   const checkedPerFamily = new Map();
   for (const client of checked) {
     const family = client.split('.')[0];
     checkedPerFamily.set(family, (checkedPerFamily.get(family) ?? 0) + 1);
   }
+  return (affected) => summariseClients(affected, checked.length, checkedPerFamily);
+}
+
+/**
+ * @param {string[]} affected
+ * @param {number} checkedCount
+ * @param {Map<string, number>} checkedPerFamily
+ */
+function summariseClients(affected, checkedCount, checkedPerFamily) {
+  if (checkedCount > 1 && affected.length === checkedCount) return ['*'];
 
   /** @type {Map<string, string[]>} */
   const affectedPerFamily = new Map();
@@ -1020,7 +1054,10 @@ function summariseClients(affected, checked) {
   return out.sort();
 }
 
-/** @typedef {'error'|'warning'|'unknown'} Severity */
+/** Every severity, most damaging first, which is the order findings sort in. */
+const SEVERITIES = /** @type {const} */ (['error', 'warning', 'unknown']);
+
+/** @typedef {(typeof SEVERITIES)[number]} Severity */
 
 /** @type {Record<ProblemVerdict, Severity>} */
 const SEVERITY_BY_VERDICT = {
