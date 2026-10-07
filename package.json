@@ -23,7 +23,7 @@
     "test:network": "CANIEMAIL_TEST_NETWORK=1 node --test 'core/*.test.mjs'"
   },
   "devDependencies": {
-    "@types/node": "^24.19.1",
+    "@types/node": "^26.6.4",
     "caniemail": "^2.0.2",
     "lefthook": "^2.1.17",
     "oxfmt": "^0.72.0",
