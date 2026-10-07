@@ -25,11 +25,18 @@ const here = dirname(fileURLToPath(import.meta.url));
 const repo = dirname(here);
 const cli = join(repo, 'skill', 'scripts', 'caniemail.mjs');
 
+/** @typedef {ReturnType<typeof import('./caniemail-core.mjs').lintEmail>} LintResult */
+/** @typedef {ReturnType<typeof import('./caniemail-core.mjs').searchFeatures>} SearchResult */
+
 /**
  * Run the CLI and capture both streams and the exit code.
  *
  * `execFile` rejects on a non-zero exit, but a non-zero exit is exactly what
  * half of these tests assert, so the rejection is unwrapped back into a result.
+ *
+ * @param {string[]} args
+ * @param {{stdin?: string}} [options]
+ * @returns {Promise<{code: number|string, stdout: string, stderr: string}>}
  */
 function run(args, { stdin } = {}) {
   return new Promise((resolve) => {
@@ -39,15 +46,22 @@ function run(args, { stdin } = {}) {
       { cwd: repo },
       (error, stdout, stderr) => resolve({ code: error?.code ?? 0, stdout, stderr }),
     );
+    // Never null: `execFile` always pipes stdin.
+    const input = /** @type {import('node:stream').Writable} */ (child.stdin);
     if (stdin !== undefined) {
-      child.stdin.end(stdin);
+      input.end(stdin);
     } else {
-      child.stdin.end();
+      input.end();
     }
   });
 }
 
-/** Parse stdout, failing with the actual output rather than a bare SyntaxError. */
+/**
+ * Parse stdout, failing with the actual output rather than a bare SyntaxError.
+ *
+ * @param {{stdout: string}} result
+ * @returns {any}  Typed at the call site, as whichever core result the command prints.
+ */
 function parse({ stdout }) {
   try {
     return JSON.parse(stdout);
@@ -63,6 +77,7 @@ function parse({ stdout }) {
 test('search prints JSON results on stdout', async () => {
   const result = await run(['search', 'rounded corners', '--limit', '3', '--offline']);
   assert.equal(result.code, 0, result.stderr);
+  /** @type {SearchResult} */
   const output = parse(result);
   assert.ok(output.results.length > 0 && output.results.length <= 3);
   assert.ok(output.results.some((r) => r.slug === 'css-border-radius'));
@@ -116,6 +131,7 @@ test('lint falls back to stdin when given neither --html nor --css', async () =>
     stdin: '<div style="display:flex">hi</div>',
   });
   assert.equal(result.code, 0, result.stderr);
+  /** @type {LintResult} */
   const output = parse(result);
   assert.ok(
     output.findings.some((f) => f.feature === 'css-display-flex'),
@@ -126,7 +142,9 @@ test('lint falls back to stdin when given neither --html nor --css', async () =>
 test('--no-untested suppresses unknown findings', async () => {
   const args = ['lint', '--clients', '*', '--offline'];
   const html = '<div style="backdrop-filter:blur(2px)">hi</div>';
+  /** @type {LintResult} */
   const withUntested = parse(await run(args, { stdin: html }));
+  /** @type {LintResult} */
   const without = parse(await run([...args, '--no-untested'], { stdin: html }));
 
   assert.ok(withUntested.findings.some((f) => f.verdict === 'untested'));

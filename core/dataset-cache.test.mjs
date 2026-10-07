@@ -22,6 +22,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
+import { once } from 'node:events';
 import { createServer } from 'node:http';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -64,6 +65,10 @@ const CACHED = {
   nicenames: {},
 };
 
+/**
+ * @param {unknown} body
+ * @returns {import('node:http').RequestListener}
+ */
 const serveJson = (body) => (_request, response) => {
   response.writeHead(200, { 'content-type': 'application/json' });
   response.end(JSON.stringify(body));
@@ -76,17 +81,23 @@ const serveJson = (body) => (_request, response) => {
  * `hits` is the point of the server as much as its body is: "did this touch the
  * network at all" is the assertion for half the cases here, and it is not
  * answerable from the returned dataset.
+ *
+ * @param {import('node:test').TestContext} t
+ * @param {import('node:http').RequestListener} [handler]
  */
 async function harness(t, handler = serveJson(REMOTE)) {
   const cacheDir = await mkdtemp(join(tmpdir(), 'caniemail-cache-'));
-  const state = { hits: 0, cacheDir, cacheFile: join(cacheDir, 'data.json') };
+  const cacheFile = join(cacheDir, 'data.json');
 
   const server = createServer((request, response) => {
     state.hits += 1;
     handler(request, response);
   });
-  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
-  state.dataUrl = `http://127.0.0.1:${server.address().port}/api/data.json`;
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  // A TCP listener's address is always an `AddressInfo`; only a pipe gives a string.
+  const { port } = /** @type {import('node:net').AddressInfo} */ (server.address());
+  const dataUrl = `http://127.0.0.1:${port}/api/data.json`;
 
   t.after(async () => {
     // A hung request holds a socket open, and `close` waits for it — which
@@ -96,16 +107,28 @@ async function harness(t, handler = serveJson(REMOTE)) {
     await rm(cacheDir, { recursive: true, force: true });
   });
 
-  /** Write a cache entry as `loadDataset` would have written it. */
-  state.seedCache = async (raw, ageMs = 0) => {
-    await mkdir(cacheDir, { recursive: true });
-    const fetchedAt = new Date(Date.now() - ageMs).toISOString();
-    await writeFile(state.cacheFile, JSON.stringify({ fetchedAt, raw }));
-    return fetchedAt;
-  };
+  const state = {
+    hits: 0,
+    cacheDir,
+    cacheFile,
+    dataUrl,
 
-  state.load = (options) =>
-    loadDataset({ cacheDir, dataUrl: state.dataUrl, timeoutMs: 2_000, ...options });
+    /**
+     * Write a cache entry as `loadDataset` would have written it.
+     *
+     * @param {unknown} raw
+     * @param {number} [ageMs]
+     */
+    seedCache: async (raw, ageMs = 0) => {
+      await mkdir(cacheDir, { recursive: true });
+      const fetchedAt = new Date(Date.now() - ageMs).toISOString();
+      await writeFile(cacheFile, JSON.stringify({ fetchedAt, raw }));
+      return fetchedAt;
+    },
+
+    /** @param {Parameters<typeof loadDataset>[0]} [options] */
+    load: (options) => loadDataset({ cacheDir, dataUrl, timeoutMs: 2_000, ...options }),
+  };
 
   return state;
 }
@@ -123,12 +146,12 @@ test('a successful fetch answers live, and lands in the cache', async (t) => {
   assert.equal(dataset.meta.warning, null);
   assert.equal(dataset.meta.lastUpdate, REMOTE.last_update_date);
   assert.equal(dataset.meta.featureCount, 1);
-  assert.ok(Date.parse(dataset.meta.fetchedAt) > 0);
+  assert.ok(Date.parse(dataset.meta.fetchedAt ?? '') > 0);
   assert.equal(h.hits, 1);
 
   // Indexed like any other copy, not passed through raw.
   assert.deepEqual(dataset.clients, ['loopback.server']);
-  assert.equal(dataset.bySlug.get('loopback-feature').title, 'Loopback feature');
+  assert.equal(dataset.bySlug.get('loopback-feature')?.title, 'Loopback feature');
 
   const written = JSON.parse(await readFile(h.cacheFile, 'utf8'));
   assert.equal(written.fetchedAt, dataset.meta.fetchedAt);
@@ -192,7 +215,7 @@ test('a failed fetch falls back to the cache, and says the answer may be stale',
 
   assert.equal(h.hits, 1, 'the fetch is attempted before the cache is trusted');
   assert.equal(dataset.meta.source, 'cache');
-  assert.match(dataset.meta.warning, /may be out of date/);
+  assert.match(dataset.meta.warning ?? '', /may be out of date/);
   assert.equal(dataset.meta.lastUpdate, CACHED.last_update_date);
 });
 
@@ -207,7 +230,7 @@ test('a body that is not JSON counts as a failed fetch', async (t) => {
   const dataset = await h.load();
 
   assert.equal(dataset.meta.source, 'bundled');
-  assert.match(dataset.meta.warning, /bundled/);
+  assert.match(dataset.meta.warning ?? '', /bundled/);
   assert.ok(dataset.features.length > 250, 'the real snapshot, not the loopback one');
 });
 
@@ -242,7 +265,7 @@ test('a 200 carrying JSON that is not the dataset counts as a failed fetch', asy
   const dataset = await h.load();
 
   assert.equal(dataset.meta.source, 'bundled');
-  assert.match(dataset.meta.warning, /Live fetch and cache both unavailable/);
+  assert.match(dataset.meta.warning ?? '', /Live fetch and cache both unavailable/);
   assert.ok(dataset.features.length > 250, 'a misshapen body must never index as a dataset');
 
   // The half that outlives the incident. A cached misshapen body is served for
@@ -278,7 +301,7 @@ test('a failed fetch with no cache falls back to the bundled snapshot', async (t
 
   assert.equal(dataset.meta.source, 'bundled');
   assert.equal(dataset.meta.fetchedAt, null);
-  assert.match(dataset.meta.warning, /Live fetch and cache both unavailable/);
+  assert.match(dataset.meta.warning ?? '', /Live fetch and cache both unavailable/);
   assert.ok(dataset.features.length > 250);
 });
 
@@ -319,7 +342,7 @@ test('offline reaches for neither the network nor the cache', async (t) => {
   // Deliberately not the cache, fresh though it is: offline means "answer from
   // the copy that shipped with this tool", which is the only one whose contents
   // are known. The warning names that rather than a failure.
-  assert.match(dataset.meta.warning, /^Offline mode/);
+  assert.match(dataset.meta.warning ?? '', /^Offline mode/);
   assert.ok(dataset.features.length > 250);
 });
 
@@ -361,7 +384,9 @@ test('an unwritable cache costs a rewrite, not the answer', async (t) => {
 
 /** Hold every response until `release` is called, so calls can overlap. */
 function heldServer() {
+  /** @type {(() => void)[]} */
   const waiting = [];
+  /** @type {import('node:http').RequestListener} */
   const handler = (request, response) => waiting.push(() => serveJson(REMOTE)(request, response));
   return { handler, release: () => waiting.splice(0).forEach((respond) => respond()) };
 }
@@ -414,5 +439,5 @@ test('a reload that finds upstream unmoved keeps the features and takes the new 
   assert.equal(h.hits, 2);
   assert.equal(second.features, first.features, 'the array the title tables are keyed on');
   assert.notEqual(second.meta, first.meta);
-  assert.ok(Date.parse(second.meta.fetchedAt) > Date.parse(first.meta.fetchedAt));
+  assert.ok(Date.parse(second.meta.fetchedAt ?? '') > Date.parse(first.meta.fetchedAt ?? ''));
 });

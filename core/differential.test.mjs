@@ -40,12 +40,18 @@ const dataset = { features: snapshot.data };
 const fixtures = readdirSync(fixtureDir).sort();
 const updateGoldens = process.env.UPDATE_GOLDENS === '1';
 
+/** @typedef {import('./upstream-detect.mjs').Range} Range */
+/** @typedef {Range['start']} Point */
+/** @typedef {Record<string, {fixtures: string[], reason: string}>} TitleExceptions */
+
 /**
  * Titles upstream reports that we deliberately do not.
  *
  * This list is short on purpose: every entry is a case where upstream's
  * detection is wrong, not merely different. Anything else appearing here would
  * mean the port lost coverage.
+ *
+ * @type {TitleExceptions}
  */
 const EXPECTED_MISSING = {
   // `getMatchingElementTitles` compares with `tagName.includes(value)`, so
@@ -68,6 +74,8 @@ const EXPECTED_MISSING = {
  * Titles whose position we move for a reason no rule can derive.
  *
  * Everything else must be explained by one of the mechanical classifiers below.
+ *
+ * @type {TitleExceptions}
  */
 const EXPECTED_MOVES = {
   '<rt> element': {
@@ -84,6 +92,10 @@ const EXPECTED_MOVES = {
  * The package's `adjustPosition`, reproduced so the `<style>` offset defect can
  * be verified rather than waved through: applying the offset it never applied
  * to a `<style>` block must turn its position into ours.
+ *
+ * @param {Range} position
+ * @param {Point} offset
+ * @returns {Range}
  */
 function adjustPosition(position, offset) {
   return {
@@ -102,10 +114,16 @@ function adjustPosition(position, offset) {
   };
 }
 
-/** Document coordinates of the first character of each `<style>` block's text. */
+/**
+ * Document coordinates of the first character of each `<style>` block's text.
+ *
+ * @param {string} html
+ * @returns {Point[]}
+ */
 function styleBlockOffsets(html) {
   const starts = [0];
   for (let i = 0; i < html.length; i += 1) if (html[i] === '\n') starts.push(i + 1);
+  /** @param {number} offset */
   const locate = (offset) => {
     let low = 0;
     for (let i = 0; i < starts.length; i += 1) if (starts[i] <= offset) low = i;
@@ -114,16 +132,35 @@ function styleBlockOffsets(html) {
   return scanHtml(html).styleBlocks.map((block) => locate(block.textStart));
 }
 
+/**
+ * @param {unknown} a
+ * @param {unknown} b
+ */
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
+/**
+ * @param {Point} a
+ * @param {Point} b
+ */
 const before = (a, b) => a.line < b.line || (a.line === b.line && a.column <= b.column);
 
-/** Is `inner` wholly inside `outer`? */
+/**
+ * Is `inner` wholly inside `outer`?
+ *
+ * @param {Range} outer
+ * @param {Range} inner
+ */
 const contains = (outer, inner) => before(outer.start, inner.start) && before(inner.end, outer.end);
 
 /**
  * Why does our position differ from upstream's? Null means "no known reason",
  * which fails the test.
+ *
+ * @param {string} title
+ * @param {Range|undefined} upstreamPosition
+ * @param {Range} ourPosition
+ * @param {Point[]} offsets  From `styleBlockOffsets`.
+ * @returns {string|null}
  */
 function classifyMove(title, upstreamPosition, ourPosition, offsets) {
   if (!upstreamPosition) {
@@ -149,11 +186,19 @@ function classifyMove(title, upstreamPosition, ourPosition, offsets) {
 /* The suite                                                                   */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * @param {string} name  A fixture file name; its extension says which input it is.
+ * @param {string} code
+ */
 function inputFor(name, code) {
   return name.endsWith('.css') ? { css: code } : { html: code };
 }
 
-/** Upstream's position object in our rendering, or a marker when it reported none. */
+/**
+ * Upstream's position object in our rendering, or a marker when it reported none.
+ *
+ * @param {Range|undefined} position
+ */
 function describePosition(position) {
   return position ? formatPosition(position) : 'no-position';
 }
@@ -165,6 +210,9 @@ function describePosition(position) {
  * containment — which needs numbers rather than a string. Parsing here rather
  * than exporting a parser from the core keeps a function that exists only for
  * this suite out of the vendored modules, as `adjustPosition` already is.
+ *
+ * @param {string} text
+ * @returns {Range}
  */
 function parsePosition(text) {
   const [start, end] = text.split('-').map((point) => {

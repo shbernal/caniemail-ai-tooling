@@ -37,7 +37,7 @@ const dataset = await loadDataset({ offline: true });
 
 test('offline load falls back to the bundled dataset and says so', () => {
   assert.equal(dataset.meta.source, 'bundled');
-  assert.match(dataset.meta.warning, /bundled/);
+  assert.match(dataset.meta.warning ?? '', /bundled/);
   assert.ok(dataset.features.length > 250);
 });
 
@@ -54,6 +54,7 @@ test('client roster is derived from the data', () => {
 test('listClients resolves human-readable names', () => {
   const clients = listClients(dataset);
   const outlook = clients.find((c) => c.client === 'outlook.windows');
+  assert.ok(outlook);
   assert.equal(outlook.family, 'Outlook');
   assert.equal(outlook.platform, 'Windows');
 });
@@ -83,6 +84,7 @@ test('regression: "a" resolves to mitigated and keeps its notes', () => {
 });
 
 test('the four verdicts are all reachable and distinct', () => {
+  /** @param {string} value */
   const build = (value) => ({ stats: { gmail: { 'desktop-webmail': { '2024-01': value } } } });
   const verdicts = ['y', 'n', 'a', 'u'].map(
     (letter) => resolveSupport(build(letter), 'gmail.desktop-webmail').verdict,
@@ -204,8 +206,11 @@ test('a client list that is not a list says so, rather than "none given"', () =>
   // Reachable only through the core API — zod and the CLI both hand down an
   // array — but it is the obvious slip, and "at least one client is required"
   // sent it looking for a client it had already supplied.
+  // @ts-expect-error The wrong type is the input under test.
   assert.throws(() => expandClients(dataset, 'outlook.windows'), /must be an array, not string/);
+  // @ts-expect-error
   assert.throws(() => expandClients(dataset, null), /must be an array, not null/);
+  // @ts-expect-error
   assert.throws(() => expandClients(dataset, undefined), /must be an array, not undefined/);
 });
 
@@ -256,7 +261,7 @@ test('search returns identifiers only, never stats', () => {
   const result = searchFeatures(dataset, 'flex');
   for (const hit of result.results) {
     assert.ok(hit.slug && hit.title && hit.url);
-    assert.equal(hit.stats, undefined, 'search must not carry the support matrix');
+    assert.equal('stats' in hit, false, 'search must not carry the support matrix');
   }
 });
 
@@ -304,9 +309,10 @@ test('a limit that can return nothing is an error, not an empty result', () => {
 test('check_feature_support gives a per-client verdict', () => {
   const result = checkFeatureSupport(dataset, 'css-display-flex', ['outlook.windows', 'gmail.*']);
   assert.equal(result.slug, 'css-display-flex');
-  assert.ok(result.url.startsWith('https://'));
+  assert.ok(result.url?.startsWith('https://'));
 
   const outlook = result.support.find((s) => s.client === 'outlook.windows');
+  assert.ok(outlook);
   assert.equal(outlook.verdict, UNSUPPORTED);
   assert.ok(outlook.versions_on_record.length > 0);
 
@@ -318,8 +324,8 @@ test('check_feature_support surfaces test-date staleness', () => {
   const result = checkFeatureSupport(dataset, 'amp', ['gmail.desktop-webmail']);
   // The AMP entry was last tested in 2020 and is well past the caution
   // threshold; the agent should be told rather than left to infer it.
-  assert.ok(result.staleness.years_old > 3);
-  assert.match(result.staleness.note, /re-verify/);
+  assert.ok((result.staleness.years_old ?? 0) > 3);
+  assert.match(result.staleness.note ?? '', /re-verify/);
 });
 
 test('an unknown slug points at the search tool', () => {
@@ -375,6 +381,9 @@ test('a version pin no requested client carries is still an error', () => {
  *
  * Titles live in the `features` legend rather than on the finding, so this
  * joins the two — and in doing so checks on every use that the join holds.
+ *
+ * @param {ReturnType<typeof lintEmail>} result
+ * @param {string} title
  */
 const byTitle = (result, title) =>
   result.findings.filter((f) => result.features[f.feature]?.title === title);
@@ -393,11 +402,12 @@ test('lint reports failures with position, notes and url', () => {
 
   const legend = result.features[flex.feature];
   assert.ok(legend, 'every finding’s feature must be in the legend');
-  assert.ok(legend.url.startsWith('https://'));
+  assert.ok(legend.url?.startsWith('https://'));
   assert.match(legend.positions[0], /^\d+:\d+-\d+:\d+$/);
   assert.equal(legend.occurrence_count, 1);
 
   const radius = result.findings.find((f) => f.feature === 'css-border-radius');
+  assert.ok(radius);
   assert.ok(
     radius.notes.some((n) => /VML|RoundRect/i.test(n)),
     'expected the VML workaround note',
@@ -467,6 +477,7 @@ test('per-client notes never contradict the verdict they attach to', () => {
   assert.ok(findings.length >= 2, 'expected gap to split across verdicts');
 
   const outlook = findings.find((f) => f.clients_affected.includes('outlook.windows'));
+  assert.ok(outlook);
   assert.equal(outlook.verdict, UNSUPPORTED);
   assert.deepEqual(
     outlook.notes,
@@ -475,6 +486,7 @@ test('per-client notes never contradict the verdict they attach to', () => {
   );
 
   const gmail = findings.find((f) => f.clients_affected.includes('gmail.desktop-webmail'));
+  assert.ok(gmail);
   assert.equal(gmail.verdict, MITIGATED);
   assert.ok(
     gmail.notes.some((n) => /column-gap/.test(n)),
@@ -655,6 +667,7 @@ test('a feature every tested client supports still reports its untested clients'
   // And it really is untested rather than unsupported: every one of those
   // clients has no stats entry for the feature.
   const feature = dataset.byTitle.get('<div> element');
+  assert.ok(feature);
   // `clients_affected` is compressed against `clients_checked`, so expanding it
   // is how a caller gets back to identifiers — and doing so here proves the
   // compression is lossless as well as checking the verdict.
@@ -703,6 +716,7 @@ test('detection is one parse, not one per client', () => {
   const html = '<div style="display:flex; border-radius:8px">x</div>';
   const one = lintEmail(dataset, { html, clients: ['outlook.windows'] });
   const all = lintEmail(dataset, { html, clients: ['*'] });
+  /** @param {ReturnType<typeof lintEmail>} result */
   const titles = (result) => new Set(Object.values(result.features).map((f) => f.title));
   for (const title of titles(one)) assert.ok(titles(all).has(title));
 });

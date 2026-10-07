@@ -26,6 +26,7 @@ import {
   analyzeSelectorList,
 } from './selector-shapes.mjs';
 
+/** @param {string} selector */
 const shapesOf = (selector) => [...analyzeSelector(selector).shapes].sort();
 
 /** One row per shape the dataset names. */

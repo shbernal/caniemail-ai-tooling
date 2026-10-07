@@ -13,7 +13,12 @@ import assert from 'node:assert/strict';
 
 import { scanHtml } from './html-scan.mjs';
 
+/** @param {string} html */
 const tags = (html) => scanHtml(html).elements.map((element) => element.tagName);
+/**
+ * @param {string} html
+ * @param {number} [index]
+ */
 const attributesOf = (html, index = 0) =>
   Object.fromEntries(
     scanHtml(html).elements[index].attributes.map((attribute) => [attribute.name, attribute.value]),
@@ -68,6 +73,7 @@ test('the style attribute reports where its value starts', () => {
   const html = '<td style="color:red">x</td>';
   const [element] = scanHtml(html).elements;
   const style = element.attributes.find((attribute) => attribute.name === 'style');
+  assert.ok(style);
   assert.equal(html.slice(style.valueStart, style.valueStart + style.value.length), 'color:red');
 });
 
@@ -206,7 +212,8 @@ test('many raw-text elements in a large document scan in linear time', () => {
 
 test('a closing tag ends the elements left open inside it', () => {
   const { elements } = scanHtml('<b><i>x</b>y</i>');
-  const end = (tagName) => elements.find((element) => element.tagName === tagName).end;
+  /** @param {string} tagName */
+  const end = (tagName) => elements.find((element) => element.tagName === tagName)?.end;
   assert.equal(end('b'), 10);
   assert.equal(end('i'), 6, 'the <i> ends where </b> begins, not at its own stray </i>');
 });

@@ -179,6 +179,7 @@ test('attributes match by name', () => {
 test('a title naming several attributes yields each of them', () => {
   // Built from a synthetic dataset rather than the snapshot: this is the
   // convention that has to hold for a title upstream has not written yet.
+  /** @param {string} title */
   const attributes = (title) => buildTitleTables([{ title, category: 'html' }]).attributes;
 
   assert.deepEqual(attributes('command and commandfor attributes'), [
@@ -204,6 +205,10 @@ test('a title that only reads like an attribute list yields nothing', () => {
 });
 
 test('element/attribute pairs need both halves', () => {
+  /**
+   * @param {string} tag
+   * @param {[string, string][]} attributes
+   */
   const pair = (tag, attributes) => matchElementAttributes(tables, tag, new Map(attributes));
   assert.deepEqual(pair('input', [['type', 'checkbox']]), ['<input type="checkbox"> element']);
   assert.deepEqual(pair('input', [['type', 'text']]), ['<input type="text"> element']);
@@ -214,6 +219,7 @@ test('element/attribute pairs need both halves', () => {
 });
 
 test('anchor pairs distinguish local, mail and ordinary links', () => {
+  /** @param {[string, string][]} attributes */
   const pair = (attributes) => matchElementAttributes(tables, 'a', new Map(attributes));
   assert.deepEqual(pair([['href', '#top']]), ['Local anchors']);
   assert.deepEqual(pair([['name', 'top']]), ['Local anchors']);
@@ -222,6 +228,7 @@ test('anchor pairs distinguish local, mail and ordinary links', () => {
 });
 
 test('AMP is declared by either spelling of its attribute', () => {
+  /** @param {[string, string][]} attributes */
   const pair = (attributes) => matchElementAttributes(tables, 'html', new Map(attributes));
   assert.deepEqual(pair([['⚡4email', '']]), ['AMP for Email']);
   assert.deepEqual(pair([['amp4email', '']]), ['AMP for Email']);
@@ -286,6 +293,7 @@ test('the tables reach all but the four features markup cannot express', () => {
   // rather than failing loudly. This is the tripwire: if upstream invents a
   // shape the conventions miss, the reachable count drops and this fails.
   const reachable = new Set();
+  /** @param {{title: string}[]} titles */
   const add = (titles) => {
     for (const entry of titles) reachable.add(entry.title);
   };

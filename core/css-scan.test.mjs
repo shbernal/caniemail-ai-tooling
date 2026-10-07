@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 
 import { scanCss, scanStyleAttribute, splitTopLevel } from './css-scan.mjs';
 
+/** @param {string} css */
 const declarationsIn = (css) =>
   scanCss(css).rules.flatMap((rule) =>
     rule.declarations.map((declaration) => `${declaration.property}:${declaration.value}`),
@@ -214,7 +215,7 @@ test('an escaped character in a value or a group is not syntax', () => {
   const scan = scanCss('.a\\/*b{color:red}');
   assert.deepEqual(scan.comments, []);
   assert.deepEqual(
-    scan.rules.at(-1).declarations.map((d) => d.property),
+    scan.rules.at(-1)?.declarations.map((d) => d.property),
     ['color'],
   );
 });
@@ -261,7 +262,7 @@ test('scanning never throws, whatever the input', () => {
 test('a block nested past the depth limit is stepped over, not the stylesheet', () => {
   const deep = 'a{'.repeat(100) + 'color:red' + '}'.repeat(100);
   const scan = scanCss(`${deep} .b { float: left }`);
-  assert.deepEqual(scan.rules.at(-1).selectors, ['.b']);
+  assert.deepEqual(scan.rules.at(-1)?.selectors, ['.b']);
   assert.deepEqual(declarationsIn(`${deep} .b { float: left }`).at(-1), 'float:left');
   // Shallow nesting is still read all the way down.
   assert.deepEqual(declarationsIn('a{'.repeat(10) + 'color:red' + '}'.repeat(10)), ['color:red']);
