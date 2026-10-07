@@ -47,6 +47,19 @@ import {
   urlsFromSrcset,
 } from './feature-titles.mjs';
 
+/** @typedef {import('./feature-titles.mjs').TitleTables} TitleTables */
+/** @typedef {import('./css-scan.mjs').ScannedDeclaration} ScannedDeclaration */
+
+/**
+ * One detected title: every place it was seen, up to `MAX_POSITIONS`, and how
+ * many places that was.
+ *
+ * @typedef {object} Detection
+ * @property {string} title
+ * @property {string[]} positions  `line:col-line:col`, earliest first.
+ * @property {number} occurrence_count
+ */
+
 /**
  * Maps a 0-based offset to a 1-based line and column.
  *
@@ -58,6 +71,7 @@ import {
 class LineIndex {
   #starts = [0];
 
+  /** @param {string} source */
   constructor(source) {
     for (let i = 0; i < source.length; i += 1) {
       if (source[i] === '\n') this.#starts.push(i + 1);
@@ -65,7 +79,10 @@ class LineIndex {
     this.length = source.length;
   }
 
-  /** @returns {{line: number, column: number}} */
+  /**
+   * @param {number} offset
+   * @returns {{line: number, column: number}}
+   */
   locate(offset) {
     const clamped = Math.max(0, Math.min(offset, this.length));
     let low = 0;
@@ -114,14 +131,23 @@ const MAX_POSITIONS = 10;
  * line.
  */
 class Sightings {
+  /** @type {Map<string, {ranges: {start: number, end: number}[], seen: Set<string>}>} */
   #hits = new Map();
 
+  /**
+   * @param {string} source
+   * @param {TitleTables} tables
+   */
   constructor(source, tables) {
     this.index = new LineIndex(source);
     this.tables = tables;
   }
 
-  /** @param {string} title @param {number} start @param {number} end */
+  /**
+   * @param {string} title
+   * @param {number} start
+   * @param {number} end
+   */
   record(title, start, end) {
     if (!this.tables.known.has(title)) return; // A title the dataset dropped.
 
@@ -151,7 +177,7 @@ class Sightings {
     if (hit.ranges.length > MAX_POSITIONS) hit.ranges.pop();
   }
 
-  /** @returns {Map<string, {title: string, positions: string[], occurrence_count: number}>} */
+  /** @returns {Map<string, Detection>} */
   resolve() {
     const out = new Map();
     for (const [title, { ranges, seen }] of this.#hits) {
@@ -173,12 +199,13 @@ class Sightings {
 /**
  * Detect the caniemail features used by some markup.
  *
- * @param {{features: object[]}} dataset
+ * @param {{features: readonly import('./feature-titles.mjs').TitledFeature[]}} dataset
  * @param {{html?: string, css?: string}} input
- * @returns {Map<string, {title: string, positions: string[], occurrence_count: number}>}
+ * @returns {Map<string, Detection>}
  */
 export function detectFeatures(dataset, { html, css } = {}) {
   const tables = buildTitleTables(dataset.features ?? []);
+  /** @type {Map<string, Detection>} */
   const detected = new Map();
 
   // Both inputs are their own coordinate space, so they are collected
@@ -208,6 +235,10 @@ export function detectFeatures(dataset, { html, css } = {}) {
 /* HTML                                                                        */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * @param {string} source
+ * @param {Sightings} sightings
+ */
 function detectHtml(source, sightings) {
   const { tables } = sightings;
   const scan = scanHtml(source);
@@ -237,9 +268,11 @@ function detectHtml(source, sightings) {
       sightings.record(title, start, end);
     }
 
+    const src = values.get('src');
+    const srcset = values.get('srcset');
     const urls = [];
-    if (element.tagName === 'img' && values.get('src')) urls.push(values.get('src'));
-    if (values.get('srcset')) urls.push(...urlsFromSrcset(values.get('srcset')));
+    if (element.tagName === 'img' && src) urls.push(src);
+    if (srcset) urls.push(...urlsFromSrcset(srcset));
     for (const url of urls) {
       const title = matchImageUrl(tables, url);
       if (title) sightings.record(title, start, end);
@@ -265,6 +298,11 @@ function detectHtml(source, sightings) {
 /* CSS                                                                         */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * @param {string} text
+ * @param {number} base  Where `text` starts in the coordinates being recorded.
+ * @param {Sightings} sightings
+ */
 function detectStylesheet(text, base, sightings) {
   const { tables } = sightings;
   const scan = scanCss(text);
@@ -300,6 +338,11 @@ function detectStylesheet(text, base, sightings) {
   for (const declaration of scan.declarations) detectDeclaration(declaration, base, sightings);
 }
 
+/**
+ * @param {ScannedDeclaration} declaration
+ * @param {number} base  Where the declaration's offsets start, as above.
+ * @param {Sightings} sightings
+ */
 function detectDeclaration(declaration, base, sightings) {
   const { tables } = sightings;
   const { property, value } = declaration;

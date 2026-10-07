@@ -64,6 +64,7 @@ const MAX_DEPTH = 64;
  * @returns {CssScan}
  */
 export function scanCss(source) {
+  /** @type {CssScan} */
   const out = { rules: [], declarations: [], atRules: [], comments: collectComments(source) };
   // A `}` with no block to close ends the statement list it appears in. At the
   // top level there is nothing to hand it back to, so step over it and go on.
@@ -82,6 +83,9 @@ export function scanCss(source) {
  * an at-rule prelude — and only the ones between declarations survive being
  * found structurally. Strings are stepped over, so a comment opener sitting
  * inside a quoted `content` value is not a comment.
+ *
+ * @param {string} source
+ * @returns {{start: number, end: number}[]}
  */
 function collectComments(source) {
   const comments = [];
@@ -114,6 +118,7 @@ function collectComments(source) {
  * @returns {ScannedDeclaration[]}
  */
 export function scanStyleAttribute(text) {
+  /** @type {ScannedDeclaration[]} */
   const declarations = [];
   parseDeclarationList(text, 0, text.length, declarations);
   return declarations;
@@ -122,6 +127,11 @@ export function scanStyleAttribute(text) {
 /**
  * Parse a sequence of statements until `}` or `limit`.
  *
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ * @param {CssScan} out
+ * @param {ScannedDeclaration[]} declarationSink Where a bare declaration goes.
  * @param {boolean} inKeyframes Suppresses rule records: `from`/`to`/`50%` are
  *   keyframe selectors, not CSS selectors, and reporting `from` as a type
  *   selector would be a pure false positive.
@@ -185,6 +195,10 @@ function parseStatements(source, from, limit, out, declarationSink, inKeyframes,
  * A `{` reached before any `;` or `}` means a selector and a block; anything
  * else is a declaration. This is the same test the previous parser used, and it
  * is what lets declarations and nested rules coexist inside one block.
+ *
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
  */
 function startsRule(source, from, limit) {
   // One scan for whichever comes first. Searching for `{` on its own runs to
@@ -193,6 +207,15 @@ function startsRule(source, from, limit) {
   return stop !== -1 && source[stop] === '{';
 }
 
+/**
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ * @param {CssScan} out
+ * @param {boolean} inKeyframes
+ * @param {number} depth
+ * @returns {number} One past the rule, or `from` when no rule starts there.
+ */
 function parseRule(source, from, limit, out, inKeyframes, depth) {
   const brace = scanForward(source, from, limit, '{');
   if (brace === -1) return from;
@@ -201,6 +224,7 @@ function parseRule(source, from, limit, out, inKeyframes, depth) {
     .map((selector) => selector.trim())
     .filter(Boolean);
 
+  /** @type {ScannedDeclaration[]} */
   const declarations = [];
   let end;
   if (depth >= MAX_DEPTH) {
@@ -228,6 +252,15 @@ function parseRule(source, from, limit, out, inKeyframes, depth) {
   return end;
 }
 
+/**
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ * @param {CssScan} out
+ * @param {boolean} inKeyframes
+ * @param {number} depth
+ * @returns {number} One past the at-rule, or `from` when it has no name.
+ */
 function parseAtRule(source, from, limit, out, inKeyframes, depth) {
   let i = from + 1;
   const nameStart = i;
@@ -271,12 +304,24 @@ function parseAtRule(source, from, limit, out, inKeyframes, depth) {
   return end;
 }
 
-/** One past a block's closing `}`, or `limit` when the block never closed. */
+/**
+ * One past a block's closing `}`, or `limit` when the block never closed.
+ *
+ * @param {string} source
+ * @param {number} closing
+ */
 function blockEnd(source, closing) {
   return source[closing] === '}' ? closing + 1 : closing;
 }
 
-/** Parse declarations until `}` or `limit`, with no rule or at-rule handling. */
+/**
+ * Parse declarations until `}` or `limit`, with no rule or at-rule handling.
+ *
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ * @param {ScannedDeclaration[]} sink
+ */
 function parseDeclarationList(source, from, limit, sink) {
   let i = from;
   while (i < limit) {
@@ -301,7 +346,12 @@ function parseDeclarationList(source, from, limit, sink) {
   }
 }
 
-/** @returns {ScannedDeclaration|null} */
+/**
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ * @returns {ScannedDeclaration|null}
+ */
 function parseDeclaration(source, from, limit) {
   let i = from;
   if (source[i] === '*') i += 1; // The `*property` IE hack.
@@ -327,18 +377,29 @@ function parseDeclaration(source, from, limit) {
   return { property, value, start: from, end: valueEnd };
 }
 
+/**
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ */
 function skipTerminators(source, from, limit) {
   let i = from;
   while (i < limit && (source[i] === ';' || isWhitespace(source[i]))) i += 1;
   return i;
 }
 
+/**
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ */
 function skipWhitespace(source, from, limit) {
   let i = from;
   while (i < limit && isWhitespace(source[i])) i += 1;
   return i;
 }
 
+/** @param {string|undefined} char */
 function isWhitespace(char) {
   return char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\f';
 }
@@ -350,6 +411,11 @@ function isWhitespace(char) {
  * Every caller depends on this: `content: "} not a brace {"` must not end its
  * rule, `:not(.a, .b)` must not split into two selectors, and `[title="a > b"]`
  * must not read as a child combinator.
+ *
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ * @param {string} stopChars
  */
 function scanForward(source, from, limit, stopChars) {
   let i = from;
@@ -387,6 +453,10 @@ function scanForward(source, from, limit, stopChars) {
  * quote is returned as one ordinary character and scanning carries on after
  * it. CSS ends a string token at a newline for the same reason, so that a
  * missing quote costs one declaration rather than the rest of the stylesheet.
+ *
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
  */
 function skipString(source, from, limit) {
   const quote = source[from];
@@ -404,6 +474,11 @@ function skipString(source, from, limit) {
   return from + 1;
 }
 
+/**
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ */
 function skipComment(source, from, limit) {
   const close = source.indexOf('*/', from + 2);
   return close === -1 || close >= limit ? limit : close + 2;
@@ -423,6 +498,12 @@ function skipComment(source, from, limit) {
  * its `)` or the end of the stylesheet, `;` and `}` included, so it never
  * applies that declaration, and stopping at the brace is already more than it
  * keeps.
+ *
+ * @param {string} source
+ * @param {number} from
+ * @param {number} limit
+ * @param {string} open
+ * @param {string} close
  */
 function skipNested(source, from, limit, open, close) {
   let depth = 0;
@@ -452,7 +533,12 @@ function skipNested(source, from, limit, open, close) {
   return limit;
 }
 
-/** Split on a separator that is not inside a string, group or comment. */
+/**
+ * Split on a separator that is not inside a string, group or comment.
+ *
+ * @param {string} text
+ * @param {string} separator
+ */
 export function splitTopLevel(text, separator) {
   const parts = [];
   let start = 0;
@@ -471,6 +557,8 @@ export function splitTopLevel(text, separator) {
 /**
  * `text` without its comments, found the way `collectComments` finds them, so
  * a `/*` inside a string or after a backslash stays where it is.
+ *
+ * @param {string} text
  */
 function stripComments(text) {
   let out = '';

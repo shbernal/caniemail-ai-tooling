@@ -37,12 +37,22 @@ const DATA_URL = 'https://www.caniemail.com/api/data.json';
  *
  * @typedef {'supported'|'unsupported'|'mitigated'|'untested'} Verdict
  */
-export const SUPPORTED = 'supported';
-export const UNSUPPORTED = 'unsupported';
-export const MITIGATED = 'mitigated';
-export const UNTESTED = 'untested';
+export const SUPPORTED = /** @type {const} */ ('supported');
+export const UNSUPPORTED = /** @type {const} */ ('unsupported');
+export const MITIGATED = /** @type {const} */ ('mitigated');
+export const UNTESTED = /** @type {const} */ ('untested');
 
-/** Raw dataset letter -> verdict. Anything unrecognised is treated as untested. */
+/**
+ * The verdicts a lint reports, which is every one but `supported`.
+ *
+ * @typedef {Exclude<Verdict, 'supported'>} ProblemVerdict
+ */
+
+/**
+ * Raw dataset letter -> verdict. Anything unrecognised is treated as untested.
+ *
+ * @type {Partial<Record<string, Verdict>>}
+ */
 const VERDICT_BY_LETTER = { y: SUPPORTED, n: UNSUPPORTED, a: MITIGATED, u: UNTESTED };
 
 /* Detection strategy is documented on `detectFeatures`, near its use. */
@@ -52,12 +62,50 @@ const VERDICT_BY_LETTER = { y: SUPPORTED, n: UNSUPPORTED, a: MITIGATED, u: UNTES
 /* -------------------------------------------------------------------------- */
 
 /**
+ * One feature record as caniemail publishes it. Only the fields read here are
+ * named, and every one of them is read defensively, because a record comes off
+ * the network and is believed only as far as `isDatasetShaped` checks it.
+ *
+ * `stats` is `family -> platform -> version -> cell`, where a cell is a verdict
+ * letter followed by any `#n` note references, e.g. `"a #1"`. Version keys are
+ * in authored order, which is chronological; see `resolveSupport`.
+ *
+ * @typedef {object} Feature
+ * @property {string} slug
+ * @property {string} title
+ * @property {string} category
+ * @property {string|null} [description]
+ * @property {string} [url]
+ * @property {string} [last_test_date]
+ * @property {string|null} [keywords]  Comma-separated.
+ * @property {string[]} [tags]
+ * @property {string|null} [notes]
+ * @property {Record<string, string>|null} [notes_by_num]
+ * @property {Record<string, Record<string, Record<string, string>>>} stats
+ */
+
+/**
+ * The part of a feature that resolution reads, and all a caller has to supply.
+ *
+ * @typedef {Pick<Feature, 'stats'|'notes_by_num'>} FeatureSupport
+ */
+
+/**
+ * The dataset as caniemail serves it, before indexing.
+ *
+ * @typedef {object} RawDataset
+ * @property {Feature[]} data
+ * @property {string} last_update_date
+ * @property {Record<string, Record<string, string>>} [nicenames]
+ */
+
+/**
  * @typedef {object} Dataset
- * @property {object[]} features       Raw feature records, as authored upstream.
+ * @property {Feature[]} features       Raw feature records, as authored upstream.
  * @property {string[]} clients        `family.platform` ids derived from the data.
- * @property {Map<string, object>} bySlug
- * @property {Map<string, object>} byTitle
- * @property {object} nicenames
+ * @property {Map<string, Feature>} bySlug
+ * @property {Map<string, Feature>} byTitle
+ * @property {Record<string, Record<string, string>>} nicenames
  * @property {DatasetMeta} meta
  */
 
@@ -121,6 +169,11 @@ export function isDatasetShaped(raw) {
   );
 }
 
+/**
+ * @param {RawDataset} raw
+ * @param {Pick<DatasetMeta, 'source'|'fetchedAt'|'warning'>} meta
+ * @returns {Dataset}
+ */
 function indexDataset(raw, meta) {
   const features = raw.data ?? [];
 
@@ -128,6 +181,7 @@ function indexDataset(raw, meta) {
   // out of the package's internals, which its export map blocks anyway. The
   // two agree exactly today (48 clients), and deriving means a client added
   // upstream appears here without a release.
+  /** @type {Set<string>} */
   const clients = new Set();
   for (const feature of features) {
     for (const family of Object.keys(feature.stats ?? {})) {
@@ -264,7 +318,10 @@ export async function loadDataset(options = {}) {
     }
   }
 
-  return indexDataset(bundledData, {
+  // Through `unknown` because the checker types a JSON import from the file's
+  // literal contents, a different object shape per feature, and no two of those
+  // agree with each other closely enough to be read as one `Feature`.
+  return indexDataset(/** @type {RawDataset} */ (/** @type {unknown} */ (bundledData)), {
     source: 'bundled',
     fetchedAt: null,
     warning: offline
@@ -286,7 +343,9 @@ export async function loadDataset(options = {}) {
  * @returns {() => Promise<Dataset>}
  */
 export function revalidatingDataset(revalidateMs, loadOptions = {}) {
+  /** @type {{value: Dataset, at: number} | null} */
   let loaded = null;
+  /** @type {Promise<Dataset> | null} */
   let reloading = null;
 
   async function reload() {
@@ -390,6 +449,8 @@ export function expandClients(dataset, globs) {
  * Every core module is vendored into both surfaces by file copy, so a module
  * that imports a helper drags another file into `CORE_FILES` to save four
  * lines. Keeping them self-contained is worth more than the deduplication.
+ *
+ * @param {string} value
  */
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -423,7 +484,7 @@ export function listClients(dataset) {
  * `["2011", "2016", "16.80"]`, where the newest entry sorts smallest under
  * both. The package sorts lexicographically and inherits every one of those.
  *
- * @param {object} feature Raw feature record.
+ * @param {FeatureSupport} feature
  * @param {string} client  `family.platform`.
  * @param {object} [options]
  * @param {string} [options.version] Pin a specific version instead of the latest.
@@ -472,8 +533,12 @@ export function resolveSupport(feature, client, options = {}) {
  * note reads "Partial. Supports column-gap for flexbox", which is about Gmail.
  * An error that carries a note describing partial support is worse than no
  * note. It is surfaced separately as `feature_notes`.
+ *
+ * @param {FeatureSupport} feature
+ * @param {string} raw  The cell, e.g. `"a #1 #2"`.
  */
 function notesFor(feature, raw) {
+  /** @type {string[]} */
   const notes = [];
   for (const match of String(raw).matchAll(/#(\d+)/g)) {
     const note = feature?.notes_by_num?.[match[1]];
@@ -482,12 +547,21 @@ function notesFor(feature, raw) {
   return notes;
 }
 
-/** The feature-level remark, which applies to the feature rather than any one client. */
+/**
+ * The feature-level remark, which applies to the feature rather than any one client.
+ *
+ * @param {Feature} feature
+ */
 function featureNotes(feature) {
   return feature?.notes ? String(feature.notes).trim() : null;
 }
 
-/** The version keys on record for a client, in authored order. */
+/**
+ * The version keys on record for a client, in authored order.
+ *
+ * @param {FeatureSupport} feature
+ * @param {string} client  `family.platform`.
+ */
 export function versionsFor(feature, client) {
   const [family, platform] = client.split('.');
   const versions = feature?.stats?.[family]?.[platform];
@@ -581,6 +655,10 @@ export function checkFeatureSupport(dataset, slug, clientGlobs, options = {}) {
   };
 }
 
+/**
+ * @param {{verdict: Verdict}[]} support
+ * @returns {Record<Verdict, number>}
+ */
 function summarise(support) {
   const counts = { supported: 0, unsupported: 0, mitigated: 0, untested: 0 };
   for (const entry of support) counts[entry.verdict] += 1;
@@ -592,6 +670,8 @@ function summarise(support) {
  *
  * Freshness is uneven across the dataset — some entries have not been retested
  * in years — and an agent should be able to see that rather than infer it.
+ *
+ * @param {string|undefined} lastTestDate
  */
 function stalenessOf(lastTestDate) {
   if (!lastTestDate) return { years_old: null, note: 'No test date on record.' };
@@ -762,6 +842,10 @@ export function lintEmail(dataset, options) {
   const detected = detectFeatures(dataset, { html, css });
 
   const findings = [];
+  /**
+   * @type {Record<string, {title: string, url: string|undefined, positions: string[],
+   *   occurrence_count: number, last_test_date: string|undefined}>}
+   */
   const features = {};
   for (const { title, positions, occurrence_count: occurrences } of detected.values()) {
     const feature = dataset.byTitle.get(title);
@@ -772,6 +856,7 @@ export function lintEmail(dataset, options) {
     // support in one client onto another client's hard failure — `css-gap` is
     // unsupported in Outlook, and Gmail's "Partial. Supports column-gap"
     // annotation must not travel with the Outlook error.
+    /** @type {Record<ProblemVerdict, {clients: string[], notes: Set<string>}>} */
     const buckets = {
       [UNSUPPORTED]: { clients: [], notes: new Set() },
       [MITIGATED]: { clients: [], notes: new Set() },
@@ -786,7 +871,8 @@ export function lintEmail(dataset, options) {
       for (const note of resolved.notes) bucket.notes.add(note);
     }
 
-    for (const [verdict, bucket] of Object.entries(buckets)) {
+    for (const verdict of /** @type {ProblemVerdict[]} */ (Object.keys(buckets))) {
+      const bucket = buckets[verdict];
       const affected = bucket.clients;
       if (affected.length === 0) continue;
       if (verdict === UNTESTED && !includeUntested) continue;
@@ -868,21 +954,27 @@ export function lintEmail(dataset, options) {
  * affected sets are usually *partial* within a family — a feature unsupported in
  * three of seven Outlook clients rolls up to nothing — so on a realistic lint it
  * is the `["*"]` case that does most of the work.
+ *
+ * @param {string[]} affected
+ * @param {string[]} checked
  */
 function summariseClients(affected, checked) {
   if (checked.length > 1 && affected.length === checked.length) return ['*'];
 
+  /** @type {Map<string, number>} */
   const checkedPerFamily = new Map();
   for (const client of checked) {
     const family = client.split('.')[0];
     checkedPerFamily.set(family, (checkedPerFamily.get(family) ?? 0) + 1);
   }
 
+  /** @type {Map<string, string[]>} */
   const affectedPerFamily = new Map();
   for (const client of affected) {
     const family = client.split('.')[0];
-    if (!affectedPerFamily.has(family)) affectedPerFamily.set(family, []);
-    affectedPerFamily.get(family).push(client);
+    const members = affectedPerFamily.get(family) ?? [];
+    members.push(client);
+    affectedPerFamily.set(family, members);
   }
 
   const out = [];
@@ -896,12 +988,16 @@ function summariseClients(affected, checked) {
   return out.sort();
 }
 
+/** @typedef {'error'|'warning'|'unknown'} Severity */
+
+/** @type {Record<ProblemVerdict, Severity>} */
 const SEVERITY_BY_VERDICT = {
   [UNSUPPORTED]: 'error',
   [MITIGATED]: 'warning',
   [UNTESTED]: 'unknown',
 };
 
+/** @type {Record<ProblemVerdict, string>} */
 const GUIDANCE_BY_VERDICT = {
   [UNSUPPORTED]: 'Not supported. This will not render as intended; use a fallback.',
   [MITIGATED]:

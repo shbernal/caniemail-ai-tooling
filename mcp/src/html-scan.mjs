@@ -85,12 +85,16 @@ const WHITESPACE = new Set([' ', '\t', '\n', '\r', '\f']);
  * @returns {HtmlScan}
  */
 export function scanHtml(source) {
+  /** @type {HtmlScan['elements']} */
   const elements = [];
+  /** @type {HtmlScan['comments']} */
   const comments = [];
+  /** @type {HtmlScan['doctypes']} */
   const doctypes = [];
+  /** @type {HtmlScan['styleBlocks']} */
   const styleBlocks = [];
 
-  /** @type {{element: ScannedElement}[]} */
+  /** @type {ScannedElement[]} */
   const open = [];
   const length = source.length;
   let i = 0;
@@ -184,6 +188,11 @@ export function scanHtml(source) {
  * No implied-end-tag table: `<p>a<p>b` simply nests. Only `end` offsets are
  * affected, every element is still reported with a correct `start`, and nothing
  * downstream reads the nesting.
+ *
+ * @param {ScannedElement[]} open  The elements still open, outermost first.
+ * @param {string} tagName
+ * @param {number} end  Offset of the closing tag's `>`.
+ * @param {number} lt   Offset of the closing tag's `<`.
  */
 function closeElement(open, tagName, end, lt) {
   for (let depth = open.length - 1; depth >= 0; depth -= 1) {
@@ -199,10 +208,16 @@ function closeElement(open, tagName, end, lt) {
   // A closing tag with nothing open to match. Ignore it, as browsers do.
 }
 
+/** @param {string|undefined} char */
 function isNameStart(char) {
   return char !== undefined && /[a-zA-Z]/.test(char);
 }
 
+/**
+ * @param {string} source
+ * @param {number} from
+ * @returns {number} One past the tag name.
+ */
 function readTagName(source, from) {
   let i = from;
   while (i < source.length) {
@@ -216,11 +231,14 @@ function readTagName(source, from) {
 /**
  * Read an open tag's attributes, starting just after the tag name.
  *
+ * @param {string} source
+ * @param {number} from
  * @returns {{attributes: ScannedAttribute[], selfClosing: boolean, tagEnd: number}}
  *   `tagEnd` is the offset of the `>` closing the tag, or of the last character
  *   if the tag is never closed.
  */
 function readAttributes(source, from) {
+  /** @type {ScannedAttribute[]} */
   const attributes = [];
   const seen = new Set();
   const length = source.length;
@@ -298,9 +316,15 @@ const RAW_TEXT_CLOSE = new Map(
   ]),
 );
 
-/** Offset of the `</tagName` that ends a raw-text element, or -1. */
+/**
+ * Offset of the `</tagName` that ends a raw-text element, or -1.
+ *
+ * @param {string} source
+ * @param {string} tagName  One of `RAW_TEXT_ELEMENTS`, which every caller checks.
+ * @param {number} from
+ */
 function findRawTextClose(source, tagName, from) {
-  const pattern = RAW_TEXT_CLOSE.get(tagName);
+  const pattern = /** @type {RegExp} */ (RAW_TEXT_CLOSE.get(tagName));
   pattern.lastIndex = from;
   const found = pattern.exec(source);
   return found === null ? -1 : found.index;

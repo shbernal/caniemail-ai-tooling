@@ -27,6 +27,7 @@ export const ID = 'ID selector';
 export const TYPE = 'Type selector';
 export const UNIVERSAL = 'Universal selector *';
 
+/** @type {Partial<Record<string, string>>} */
 const COMBINATOR_SHAPES = { '>': CHILD, '+': ADJACENT_SIBLING, '~': GENERAL_SIBLING };
 
 /**
@@ -71,8 +72,9 @@ export function analyzeSelector(selector) {
       continue;
     }
 
-    if (COMBINATOR_SHAPES[char]) {
-      shapes.add(COMBINATOR_SHAPES[char]);
+    const combinator = COMBINATOR_SHAPES[char];
+    if (combinator) {
+      shapes.add(combinator);
       classesInCompound = 0;
       compoundHasSimple = false;
       i += 1;
@@ -185,12 +187,20 @@ export function analyzeSelectorList(selectors) {
   return { shapes, pseudos, nesting };
 }
 
-/** The attribute name in the body of a `[...]`, before any operator. */
+/**
+ * The attribute name in the body of a `[...]`, before any operator.
+ *
+ * @param {string} body
+ */
 function attributeName(body) {
   const match = /^\s*([^\s~^|$*=\]]+)/.exec(body);
   return match ? match[1].replace(/^.*\|/, '').toLowerCase() : '';
 }
 
+/**
+ * @param {string} text
+ * @param {number} from
+ */
 function readIdentifier(text, from) {
   let i = from;
   while (i < text.length) {
@@ -212,6 +222,9 @@ function readIdentifier(text, from) {
  * descendant `0`. Any other escape is the backslash and one character. Only
  * identifiers need this; everywhere else an escape is stepped over inside a
  * string, group or bracket where the whitespace after it is not syntax.
+ *
+ * @param {string} text
+ * @param {number} from
  */
 function escapeEnd(text, from) {
   let i = from + 1;
@@ -222,10 +235,15 @@ function escapeEnd(text, from) {
   return isWhitespace(text[i] ?? '') ? i + 1 : i;
 }
 
+/** @param {string} char */
 function isIdentifierChar(char) {
   return /[^\s.#[\]():+>~*,'"\\]/.test(char);
 }
 
+/**
+ * @param {string} text
+ * @param {number} from
+ */
 function skipParenthesised(text, from) {
   let depth = 0;
   let i = from;
@@ -249,6 +267,10 @@ function skipParenthesised(text, from) {
   return text.length;
 }
 
+/**
+ * @param {string} text
+ * @param {number} from
+ */
 function skipBracketed(text, from) {
   let i = from + 1;
   while (i < text.length) {
@@ -267,6 +289,10 @@ function skipBracketed(text, from) {
   return text.length;
 }
 
+/**
+ * @param {string} text
+ * @param {number} from
+ */
 function skipQuoted(text, from) {
   const quote = text[from];
   let i = from + 1;
@@ -281,12 +307,17 @@ function skipQuoted(text, from) {
   return text.length;
 }
 
+/**
+ * @param {string} text
+ * @param {number} from
+ */
 function skipWhitespace(text, from) {
   let i = from;
   while (i < text.length && isWhitespace(text[i])) i += 1;
   return i;
 }
 
+/** @param {string|undefined} char */
 function isWhitespace(char) {
   return char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\f';
 }

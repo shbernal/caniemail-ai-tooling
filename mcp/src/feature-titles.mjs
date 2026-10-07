@@ -119,6 +119,8 @@ const VALUE_TITLE_EXCEPTIONS = {
 
 /**
  * HTML titles that name elements the `/<(\w+)>/` convention cannot recover.
+ *
+ * @type {Map<string, string[]>}
  */
 const ELEMENT_TITLE_EXCEPTIONS = new Map(
   Object.entries({
@@ -152,8 +154,19 @@ const ELEMENT_TITLE_EXCEPTIONS = new Map(
 );
 
 /**
+ * What `matchElementAttributes` tests one element against. Each matcher is
+ * `[name, expected]`; the forms `expected` takes are described there.
+ *
+ * @typedef {object} ElementAttributeRule
+ * @property {string} element
+ * @property {[name: string, expected: string|RegExp|null][]} matchers
+ */
+
+/**
  * HTML titles that pair an element with an attribute, where the pairing is not
  * spelled `<el attr="value">`.
+ *
+ * @type {Map<string, ElementAttributeRule>}
  */
 const ELEMENT_ATTRIBUTE_TITLE_EXCEPTIONS = new Map(
   Object.entries({
@@ -248,6 +261,16 @@ export const HTML_DOCTYPE_TITLE = 'HTML5 doctype';
 
 const PROPERTY_NAME = /^[a-z-]+$/;
 
+/**
+ * The two fields of a feature record the tables are built from. A raw record
+ * carries more, and is accepted as it is.
+ *
+ * @typedef {{title: string, category: string}} TitledFeature
+ */
+
+/** @typedef {ReturnType<typeof createTables>} TitleTables */
+
+/** @type {WeakMap<readonly TitledFeature[], TitleTables>} */
 const cache = new WeakMap();
 
 /**
@@ -256,7 +279,8 @@ const cache = new WeakMap();
  * Memoised on the feature array, which `loadDataset` creates once per dataset,
  * so repeated lints against the same dataset build the tables once.
  *
- * @param {object[]} features Raw feature records.
+ * @param {readonly TitledFeature[]} features Raw feature records.
+ * @returns {TitleTables}
  */
 export function buildTitleTables(features) {
   const cached = cache.get(features);
@@ -266,7 +290,9 @@ export function buildTitleTables(features) {
   return tables;
 }
 
+/** @param {readonly TitledFeature[]} features */
 function createTables(features) {
+  /** @type {Partial<Record<string, string[]>>} */
   const titlesByCategory = { css: [], html: [], image: [], others: [] };
   const known = new Set();
   for (const feature of features) {
@@ -275,10 +301,10 @@ function createTables(features) {
     if (bucket) bucket.push(feature.title);
   }
 
-  const css = titlesByCategory.css;
+  const css = titlesByCategory.css ?? [];
   // "AMP for Email" is categorised `others` but is detected from markup, so it
   // joins the HTML titles. This mirrors upstream, which does the same.
-  const html = [...titlesByCategory.html, ...['AMP for Email'].filter((t) => known.has(t))];
+  const html = [...(titlesByCategory.html ?? []), ...['AMP for Email'].filter((t) => known.has(t))];
 
   return {
     known,
@@ -375,9 +401,9 @@ function createTables(features) {
       if (exception) return [{ title, ...exception }];
       const match = /<(\w+) ([\w-]+)="([^"]+)"> element/.exec(title);
       if (!match) return [];
-      return [
-        { title, element: match[1].toLowerCase(), matchers: [[match[2].toLowerCase(), match[3]]] },
-      ];
+      /** @type {ElementAttributeRule['matchers']} */
+      const matchers = [[match[2].toLowerCase(), match[3]]];
+      return [{ title, element: match[1].toLowerCase(), matchers }];
     }),
 
     /* Images ------------------------------------------------------------- */
@@ -387,6 +413,10 @@ function createTables(features) {
   };
 }
 
+/**
+ * @param {Map<string, string>} map  Anything -> title.
+ * @param {Set<string>} known
+ */
 function filterToKnown(map, known) {
   return new Map([...map].filter(([, title]) => known.has(title)));
 }
@@ -402,6 +432,9 @@ function filterToKnown(map, known) {
  * `border-radius` reports both `border-radius` and `border`. That is upstream's
  * rule and it is the right one: the shorthand's support data is what an agent
  * needs when the longhand has none.
+ *
+ * @param {TitleTables} tables
+ * @param {string} propertyName
  */
 export function matchProperty(tables, propertyName) {
   const titles = [];
@@ -413,7 +446,13 @@ export function matchProperty(tables, propertyName) {
   return titles;
 }
 
-/** Titles matched by a `property: value` pair, ignoring `!important`. */
+/**
+ * Titles matched by a `property: value` pair, ignoring `!important`.
+ *
+ * @param {TitleTables} tables
+ * @param {string} propertyName
+ * @param {string} propertyValue
+ */
 export function matchPropertyValuePair(tables, propertyName, propertyValue) {
   const value = stripImportant(propertyValue);
   const titles = [];
@@ -423,7 +462,12 @@ export function matchPropertyValuePair(tables, propertyName, propertyValue) {
   return titles;
 }
 
-/** Titles matched by function calls appearing in a declaration value. */
+/**
+ * Titles matched by function calls appearing in a declaration value.
+ *
+ * @param {TitleTables} tables
+ * @param {string} propertyValue
+ */
 export function matchFunctions(tables, propertyValue) {
   // No whitespace before the paren: CSS functional notation does not allow it,
   // and permitting it turns `Arial (fallback)` into a function call.
@@ -433,12 +477,22 @@ export function matchFunctions(tables, propertyValue) {
   return tables.functions.filter((f) => f.names.some((n) => called.has(n))).map((f) => f.title);
 }
 
-/** Titles matched by a keyword appearing in a declaration value. */
+/**
+ * Titles matched by a keyword appearing in a declaration value.
+ *
+ * @param {TitleTables} tables
+ * @param {string} propertyValue
+ */
 export function matchKeywords(tables, propertyValue) {
   return tables.keywords.filter((k) => propertyValue.includes(k.value)).map((k) => k.title);
 }
 
-/** Titles matched by a bare value keyword, as a whole word. */
+/**
+ * Titles matched by a bare value keyword, as a whole word.
+ *
+ * @param {TitleTables} tables
+ * @param {string} propertyValue
+ */
 export function matchValues(tables, propertyValue) {
   const titles = [];
   for (const { title, names } of tables.values) {
@@ -459,6 +513,9 @@ export function matchValues(tables, propertyValue) {
  * A unit only counts immediately after a digit, so `margin: 0` does not report
  * the `in` unit and `1rem` does not report `em`. `initial` is a keyword rather
  * than a suffix, so it matches on a word boundary instead.
+ *
+ * @param {TitleTables} tables
+ * @param {string} propertyValue
  */
 export function matchUnits(tables, propertyValue) {
   const titles = [];
@@ -478,6 +535,10 @@ export function matchUnits(tables, propertyValue) {
  * `@media (prefers-color-scheme)` additionally requires that feature to appear
  * in the at-rule's prelude, which is what makes those five titles reachable —
  * upstream compared them against bare node type names, so they never matched.
+ *
+ * @param {TitleTables} tables
+ * @param {string} name
+ * @param {string} [prelude]
  */
 export function matchAtRule(tables, name, prelude = '') {
   const titles = [];
@@ -489,17 +550,32 @@ export function matchAtRule(tables, name, prelude = '') {
   return titles;
 }
 
-/** Titles matched by a pseudo-class or pseudo-element name. */
+/**
+ * Titles matched by a pseudo-class or pseudo-element name.
+ *
+ * @param {TitleTables} tables
+ * @param {string} pseudoName
+ */
 export function matchPseudo(tables, pseudoName) {
   return tables.pseudos.filter((p) => p.name === pseudoName).map((p) => p.title);
 }
 
-/** Titles matched by a tag name. */
+/**
+ * Titles matched by a tag name.
+ *
+ * @param {TitleTables} tables
+ * @param {string} tagName
+ */
 export function matchElement(tables, tagName) {
   return tables.elements.filter((e) => e.names.includes(tagName)).map((e) => e.title);
 }
 
-/** Titles matched by the attribute names present on an element. */
+/**
+ * Titles matched by the attribute names present on an element.
+ *
+ * @param {TitleTables} tables
+ * @param {string[]} attributeNames
+ */
 export function matchAttributes(tables, attributeNames) {
   return tables.attributes
     .filter((a) => a.names.some((name) => attributeNames.includes(name)))
@@ -516,7 +592,7 @@ export function matchAttributes(tables, attributeNames) {
  * compares those without regard to case. The RegExp matchers carry their own
  * flags, since `href` values are not keywords.
  *
- * @param {object} tables
+ * @param {TitleTables} tables
  * @param {string} tagName
  * @param {Map<string, string>} attributes
  */
@@ -525,9 +601,9 @@ export function matchElementAttributes(tables, tagName, attributes) {
   for (const { title, element, matchers } of tables.elementAttributes) {
     if (element !== tagName) continue;
     const hit = matchers.some(([name, expected]) => {
-      if (!attributes.has(name)) return false;
-      if (expected === null) return true;
       const value = attributes.get(name);
+      if (value === undefined) return false;
+      if (expected === null) return true;
       return expected instanceof RegExp
         ? expected.test(value)
         : value.toLowerCase() === expected.toLowerCase();
@@ -542,6 +618,10 @@ export function matchElementAttributes(tables, tagName, attributes) {
  *
  * A data: URI is read from its MIME type; anything else from the extension,
  * after query string and fragment are stripped.
+ *
+ * @param {TitleTables} tables
+ * @param {string} url
+ * @returns {string|undefined}
  */
 export function matchImageUrl(tables, url) {
   const trimmed = String(url).trim();
@@ -552,7 +632,11 @@ export function matchImageUrl(tables, url) {
   return extension ? tables.imageExtensions.get(extension) : undefined;
 }
 
-/** The candidate URLs in a `srcset` attribute. */
+/**
+ * The candidate URLs in a `srcset` attribute.
+ *
+ * @param {string} srcset
+ */
 export function urlsFromSrcset(srcset) {
   return String(srcset)
     .split(',')
@@ -560,18 +644,27 @@ export function urlsFromSrcset(srcset) {
     .filter(Boolean);
 }
 
-/** The URLs in `url(...)` functions inside a declaration value. */
+/**
+ * The URLs in `url(...)` functions inside a declaration value.
+ *
+ * @param {string} value
+ */
 export function urlsFromCssValue(value) {
   return [...String(value).matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)]
     .map((match) => match[2]?.trim())
     .filter(Boolean);
 }
 
+/** @param {string} value */
 function stripImportant(value) {
   return value.replace(/\s*!\s*important\s*$/i, '').trim();
 }
 
-/** Deliberately duplicated in `caniemail-core.mjs`; see the note there. */
+/**
+ * Deliberately duplicated in `caniemail-core.mjs`; see the note there.
+ *
+ * @param {string} value
+ */
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
