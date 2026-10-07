@@ -145,6 +145,14 @@ test('versionsFor reports keys in authored order', () => {
 /* Regression: missing data is untested, not an exception                      */
 /* -------------------------------------------------------------------------- */
 
+test('a platform entry that is not an object has no versions on record', () => {
+  const feature = { stats: { gmail: { 'desktop-webmail': 'y' } } };
+  // @ts-expect-error a string where the dataset has a version record
+  assert.deepEqual(versionsFor(feature, 'gmail.desktop-webmail'), []);
+  // @ts-expect-error as above
+  assert.equal(resolveSupport(feature, 'gmail.desktop-webmail').verdict, 'untested');
+});
+
 test('regression: a missing stats entry is untested, not a throw', () => {
   // The package raises RangeError here. 16% of (feature, client) pairs have no
   // entry, so this is the common case, not an edge case.

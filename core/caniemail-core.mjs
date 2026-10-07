@@ -512,17 +512,14 @@ export function categoriesOf(dataset) {
  * @returns {{verdict: Verdict, version: string|null, raw: string|null, notes: string[]}}
  */
 export function resolveSupport(feature, client, options = {}) {
-  const [family, platform] = client.split('.');
-  const versions = feature?.stats?.[family]?.[platform];
+  const versions = cellsFor(feature, client);
 
   // No entry at all is untested, not unsupported. 16% of pairs land here, and
   // this is precisely where the package throws instead of answering.
-  if (!versions || typeof versions !== 'object') {
+  const keys = versions ? Object.keys(versions) : [];
+  if (!versions || keys.length === 0) {
     return { verdict: UNTESTED, version: null, raw: null, notes: [] };
   }
-
-  const keys = Object.keys(versions);
-  if (keys.length === 0) return { verdict: UNTESTED, version: null, raw: null, notes: [] };
 
   let version;
   if (options.version) {
@@ -584,9 +581,23 @@ function featureNotes(feature) {
  * @param {string} client  `family.platform`.
  */
 export function versionsFor(feature, client) {
+  const versions = cellsFor(feature, client);
+  return versions ? Object.keys(versions) : [];
+}
+
+/**
+ * A client's version-to-cell record, or `null` when it has none. Anything that
+ * is not an object counts as none, so a malformed entry reads as untested
+ * rather than as a list of its characters.
+ *
+ * @param {FeatureSupport} feature
+ * @param {string} client  `family.platform`.
+ * @returns {Record<string, string> | null}
+ */
+function cellsFor(feature, client) {
   const [family, platform] = client.split('.');
   const versions = feature?.stats?.[family]?.[platform];
-  return versions ? Object.keys(versions) : [];
+  return versions && typeof versions === 'object' ? versions : null;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -616,8 +627,10 @@ export function checkFeatureSupport(dataset, slug, clientGlobs, options = {}) {
   // that versions itself by date, naming a client the caller never asked about.
   // A pin no requested client carries is still an error — that is a typo — but
   // one that only some carry is resolved per client.
-  if (pinned && !clients.some((client) => versionsFor(feature, client).includes(pinned))) {
-    const withData = clients.find((client) => versionsFor(feature, client).length > 0);
+  const records = clients.map((client) => ({ client, onRecord: versionsFor(feature, client) }));
+
+  if (pinned && !records.some(({ onRecord }) => onRecord.includes(pinned))) {
+    const withData = records.find(({ onRecord }) => onRecord.length > 0)?.client;
     // Guaranteed to throw: the pin is absent from this client's keys. Going
     // through `resolveSupport` keeps one wording, and one place that knows how
     // to list what is on record. With no client carrying any version at all
@@ -626,9 +639,7 @@ export function checkFeatureSupport(dataset, slug, clientGlobs, options = {}) {
     if (withData) resolveSupport(feature, withData, { version: pinned });
   }
 
-  const support = clients.map((client) => {
-    const onRecord = versionsFor(feature, client);
-
+  const support = records.map(({ client, onRecord }) => {
     if (pinned && !onRecord.includes(pinned)) {
       // No data for the version asked about is precisely `untested`: not
       // supported, not unsupported, nothing on record. `notes` stays empty
