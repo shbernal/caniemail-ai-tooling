@@ -33,6 +33,7 @@ function openSession() {
   });
 
   let buffer = '';
+  /** @type {Map<number, (message: any) => void>} */
   const pending = new Map();
 
   child.stdout.on('data', (chunk) => {
@@ -57,6 +58,14 @@ function openSession() {
   });
 
   let nextId = 1;
+  /**
+   * The response is JSON off the wire and unchecked. Asserting its shape is
+   * what the checks below are for, so `any` is the honest type for it.
+   *
+   * @param {string} method
+   * @param {object} [params]
+   * @returns {Promise<any>}
+   */
   function request(method, params) {
     const id = nextId++;
     return new Promise((resolve, reject) => {
@@ -66,6 +75,10 @@ function openSession() {
     });
   }
 
+  /**
+   * @param {string} method
+   * @param {object} [params]
+   */
   function notify(method, params) {
     child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', method, params })}\n`);
   }
@@ -73,12 +86,19 @@ function openSession() {
   return { request, notify, close: () => child.kill() };
 }
 
+/** @type {{label: string, ok: boolean, detail: string}[]} */
 const checks = [];
+/**
+ * @param {string} label
+ * @param {unknown} condition
+ * @param {string} [detail]
+ */
 function check(label, condition, detail = '') {
   checks.push({ label, ok: Boolean(condition), detail });
   process.stdout.write(`${condition ? 'ok  ' : 'FAIL'} ${label}${detail ? ` — ${detail}` : ''}\n`);
 }
 
+/** @param {any} response A `tools/call` response. */
 function payload(response) {
   return JSON.parse(response.result.content[0].text);
 }
@@ -96,7 +116,9 @@ try {
   notify('notifications/initialized');
 
   const tools = await request('tools/list', {});
-  const names = tools.result.tools.map((t) => t.name).sort();
+  /** @type {{name: string, annotations?: Record<string, unknown>, inputSchema: unknown}[]} */
+  const toolList = tools.result.tools;
+  const names = toolList.map((t) => t.name).sort();
   check(
     'tools/list returns the four tools',
     names.join(',') === 'check_feature_support,lint_email,list_email_clients,search_features',
@@ -105,15 +127,15 @@ try {
 
   check(
     'every tool is annotated read-only and closed-world',
-    tools.result.tools.every(
+    toolList.every(
       (t) => t.annotations?.readOnlyHint === true && t.annotations?.openWorldHint === false,
     ),
   );
 
-  const lintTool = tools.result.tools.find((t) => t.name === 'lint_email');
+  const lintTool = toolList.find((t) => t.name === 'lint_email');
   check(
     'client roster is inlined in the tool schema',
-    JSON.stringify(lintTool.inputSchema).includes('outlook.windows'),
+    JSON.stringify(lintTool?.inputSchema ?? null).includes('outlook.windows'),
   );
 
   const search = await request('tools/call', {
@@ -156,6 +178,7 @@ try {
       clients: ['*'],
     },
   });
+  /** @type {{feature: string, verdict: string}[]} */
   const findings = payload(lint).findings;
   check(
     'lint_email flags display:flex',

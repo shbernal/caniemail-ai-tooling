@@ -23,9 +23,16 @@ if (!beforePath || !afterPath) {
   process.exit(2);
 }
 
+/** @param {string} path */
 const read = async (path) => JSON.parse(await readFile(path, 'utf8'));
 const [before, after] = await Promise.all([read(beforePath), read(afterPath)]);
 
+/**
+ * Either side may be a refetch that came back misshapen, so nothing about the
+ * records is assumed beyond what this script reads, and that defensively.
+ *
+ * @param {{data?: {slug: string, stats?: Record<string, any>}[]}} dataset
+ */
 const bySlug = (dataset) => new Map((dataset.data ?? []).map((f) => [f.slug, f]));
 const beforeFeatures = bySlug(before);
 const afterFeatures = bySlug(after);
@@ -33,8 +40,13 @@ const afterFeatures = bySlug(after);
 const added = [...afterFeatures.keys()].filter((slug) => !beforeFeatures.has(slug));
 const removed = [...beforeFeatures.keys()].filter((slug) => !afterFeatures.has(slug));
 
-/** Flatten one feature's stats into `family.platform@version -> letter`. */
+/**
+ * Flatten one feature's stats into `family.platform@version -> letter`.
+ *
+ * @param {{stats?: Record<string, any>}|undefined} feature
+ */
 function cells(feature) {
+  /** @type {Map<string, string>} */
   const flat = new Map();
   for (const [family, platforms] of Object.entries(feature?.stats ?? {})) {
     for (const [platform, versions] of Object.entries(platforms ?? {})) {
@@ -46,6 +58,7 @@ function cells(feature) {
   return flat;
 }
 
+/** @type {{slug: string, moved: string[]}[]} */
 const changed = [];
 for (const [slug, feature] of afterFeatures) {
   const previous = beforeFeatures.get(slug);
@@ -57,11 +70,17 @@ for (const [slug, feature] of afterFeatures) {
   if (moved.length > 0) changed.push({ slug, moved });
 }
 
+/** @param {{moved: string[]}[]} list */
 const total = (list) => list.reduce((sum, entry) => sum + entry.moved.length, 0);
 
+/** @param {string[]} slugs */
 const list = (slugs) =>
   slugs.length === 0 ? '_none_' : slugs.map((slug) => `\`${slug}\``).join(', ');
 
+/**
+ * @param {number} count
+ * @param {string} noun
+ */
 const plural = (count, noun) => `${count} ${noun}${count === 1 ? '' : 's'}`;
 
 const lines = [];

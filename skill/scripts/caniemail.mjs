@@ -45,8 +45,24 @@ Options:
   --refresh   Force a fresh fetch, ignoring the cache.
 `;
 
+/**
+ * Every flag the commands read. The four switches are `true` when given and
+ * absent otherwise; the rest carry the argument that followed them.
+ *
+ * @typedef {{
+ *   help?: true, offline?: true, refresh?: true, 'no-untested'?: true,
+ *   clients?: string, html?: string, css?: string, version?: string,
+ *   category?: string, limit?: string,
+ * }} Flags
+ */
+
+/**
+ * @param {string[]} args
+ * @returns {{positional: string[], flags: Flags}}
+ */
 function parseArgs(args) {
   const positional = [];
+  /** @type {Record<string, string|true>} */
   const flags = {};
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
@@ -67,9 +83,12 @@ function parseArgs(args) {
       i += 1;
     }
   }
-  return { positional, flags };
+  // A switch is only ever set to `true` above, and nothing else is, which is
+  // the one thing `Flags` says that this function does not show the checker.
+  return { positional, flags: /** @type {Flags} */ (flags) };
 }
 
+/** @param {Flags} flags */
 function clientsFrom(flags) {
   if (!flags.clients) {
     throw new Error('--clients is required, e.g. --clients outlook.windows,gmail.*');
@@ -94,6 +113,8 @@ async function readStdin() {
  * indentation is pure cost — on a lint against all 48 clients it was 16KB of
  * whitespace, about 4k tokens. At a terminal it is worth the bytes, and stdout
  * being a TTY is exactly the signal that distinguishes the two.
+ *
+ * @param {unknown} value
  */
 function print(value) {
   process.stdout.write(`${JSON.stringify(value, null, stdout.isTTY ? 2 : 0)}\n`);
