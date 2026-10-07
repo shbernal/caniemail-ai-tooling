@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- The skill CLI rejects an option it does not know, naming it. A typo such as
+  `--limt 3` used to be accepted as an unknown flag with `3` as its value, and
+  the command ran with the default limit. `--name=value` is accepted as well as
+  `--name value`; it used to fail with a message saying the option needed a
+  value. Skill only.
+
 - `lint_email` matches a media feature in an `@media` prelude as a whole name
   rather than a substring, so `(orientation-x)` no longer reports
   `@media (orientation)` and nothing merely containing `hover` reports the hover

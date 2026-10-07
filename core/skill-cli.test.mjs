@@ -206,6 +206,34 @@ test('a value flag followed by another flag is missing its value', async () => {
   assert.match(last.stderr, /--category needs a value/);
 });
 
+test('an unknown option is an error that names it', async () => {
+  // It used to be read as a value flag, so `--limt 3` ran with the default
+  // limit and said nothing.
+  const result = await run(['search', 'flexbox', '--limt', '3', '--offline']);
+  assert.equal(result.code, 1);
+  assert.equal(result.stdout, '');
+  assert.match(result.stderr, /Unknown option --limt\b/);
+});
+
+test('--name=value is the same as --name value', async () => {
+  const spaced = await run([
+    'check',
+    'css-display-flex',
+    '--clients',
+    'outlook.windows',
+    '--offline',
+  ]);
+  const joined = await run(['check', 'css-display-flex', '--clients=outlook.windows', '--offline']);
+  assert.equal(joined.code, 0, joined.stderr);
+  assert.deepEqual(parse(joined), parse(spaced));
+});
+
+test('a switch given a value says it takes none', async () => {
+  const result = await run(['search', 'flexbox', '--offline=yes']);
+  assert.equal(result.code, 1);
+  assert.match(result.stderr, /--offline takes no value/);
+});
+
 test('a missing --clients is an error, not an empty pass', async () => {
   const result = await run(['search', 'flexbox', '--offline']);
   assert.equal(result.code, 0, 'search does not need --clients');

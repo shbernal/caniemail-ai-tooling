@@ -15,6 +15,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { argv, exit, stdin, stdout } from 'node:process';
+import { parseArgs } from 'node:util';
 
 import {
   checkFeatureSupport,
@@ -46,46 +47,67 @@ Options:
 `;
 
 /**
- * Every flag the commands read. The four switches are `true` when given and
- * absent otherwise; the rest carry the argument that followed them.
- *
- * @typedef {{
- *   help?: true, offline?: true, refresh?: true, 'no-untested'?: true,
- *   clients?: string, html?: string, css?: string, version?: string,
- *   category?: string, limit?: string,
- * }} Flags
+ * Every option the commands read. `node:util`'s `parseArgs` rejects anything
+ * not listed here, so a typo such as `--limt 3` is an error rather than a flag
+ * nobody reads and a `3` taken for its value.
  */
+const OPTIONS = /** @type {const} */ ({
+  help: { type: 'boolean' },
+  offline: { type: 'boolean' },
+  refresh: { type: 'boolean' },
+  'no-untested': { type: 'boolean' },
+  clients: { type: 'string' },
+  html: { type: 'string' },
+  css: { type: 'string' },
+  version: { type: 'string' },
+  category: { type: 'string' },
+  limit: { type: 'string' },
+});
+
+/** @typedef {ReturnType<typeof parseCommandLine>['flags']} Flags */
 
 /**
  * @param {string[]} args
- * @returns {{positional: string[], flags: Flags}}
  */
-function parseArgs(args) {
-  const positional = [];
-  /** @type {Record<string, string|true>} */
-  const flags = {};
-  for (let i = 0; i < args.length; i += 1) {
-    const arg = args[i];
-    if (!arg.startsWith('--')) {
-      positional.push(arg);
-      continue;
-    }
-    const key = arg.slice(2);
-    if (key === 'offline' || key === 'refresh' || key === 'no-untested' || key === 'help') {
-      flags[key] = true;
-    } else {
-      // A value flag followed by another flag has no value. Consuming the flag
-      // as one turned `--clients --offline` into a client called "--offline"
-      // and an offline run into a networked one.
-      const value = args[i + 1];
-      if (value === undefined || value.startsWith('--')) throw new Error(`--${key} needs a value.`);
-      flags[key] = value;
-      i += 1;
-    }
+function parseCommandLine(args) {
+  try {
+    const { values, positionals } = parseArgs({
+      args,
+      options: OPTIONS,
+      allowPositionals: true,
+      strict: true,
+    });
+    return { positional: positionals, flags: values };
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
+    throw new Error(rephrase(error), { cause: error });
   }
-  // A switch is only ever set to `true` above, and nothing else is, which is
-  // the one thing `Flags` says that this function does not show the checker.
-  return { positional, flags: /** @type {Flags} */ (flags) };
+}
+
+/**
+ * Node's messages for a bad command line are written for a script author and
+ * suggest `--name=-XYZ` and `--` escapes. Say what is wrong in this CLI's terms
+ * instead, keeping Node's text for anything not recognised here.
+ *
+ * `--clients --offline` lands in the second case: a value option followed by
+ * another option has no value, rather than a client called "--offline" and an
+ * offline run that went to the network.
+ *
+ * @param {Error} error
+ */
+function rephrase(error) {
+  const code = 'code' in error ? error.code : undefined;
+  const option = /'(-[^' ]+)/.exec(error.message)?.[1];
+  if (!option) return error.message;
+  if (code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION') {
+    return `Unknown option ${option}. Run with --help for the options.`;
+  }
+  if (code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE') {
+    return error.message.includes('does not take')
+      ? `${option} takes no value.`
+      : `${option} needs a value.`;
+  }
+  return error.message;
 }
 
 /** @param {Flags} flags */
@@ -121,7 +143,7 @@ function print(value) {
 }
 
 async function main() {
-  const { positional, flags } = parseArgs(argv.slice(2));
+  const { positional, flags } = parseCommandLine(argv.slice(2));
   const [command, ...rest] = positional;
 
   if (!command || flags.help) {
