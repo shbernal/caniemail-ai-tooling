@@ -17,6 +17,8 @@
  * vendored copy, edit this file and run `make sync-core`.
  */
 
+import { isWhitespace } from './css-scan.mjs';
+
 /** Elements that never have a closing tag. */
 const VOID_ELEMENTS = new Set([
   'area',
@@ -48,8 +50,6 @@ const VOID_ELEMENTS = new Set([
  * invents features the recipient will never see.
  */
 const RAW_TEXT_ELEMENTS = new Set(['script', 'style', 'textarea', 'title', 'xmp']);
-
-const WHITESPACE = new Set([' ', '\t', '\n', '\r', '\f']);
 
 /**
  * @typedef {object} ScannedAttribute
@@ -222,7 +222,7 @@ function readTagName(source, from) {
   let i = from;
   while (i < source.length) {
     const char = source[i];
-    if (WHITESPACE.has(char) || char === '>' || char === '/') break;
+    if (isWhitespace(char) || char === '>' || char === '/') break;
     i += 1;
   }
   return i;
@@ -245,7 +245,7 @@ function readAttributes(source, from) {
   let i = from;
 
   while (i < length) {
-    while (i < length && WHITESPACE.has(source[i])) i += 1;
+    while (i < length && isWhitespace(source[i])) i += 1;
     if (i >= length) break;
 
     if (source[i] === '>') return { attributes, selfClosing: false, tagEnd: i };
@@ -258,7 +258,7 @@ function readAttributes(source, from) {
     const nameStart = i;
     while (i < length) {
       const char = source[i];
-      if (WHITESPACE.has(char) || char === '=' || char === '>' || char === '/') break;
+      if (isWhitespace(char) || char === '=' || char === '>' || char === '/') break;
       i += 1;
     }
     if (i === nameStart) {
@@ -268,13 +268,13 @@ function readAttributes(source, from) {
     }
     const name = source.slice(nameStart, i).toLowerCase();
 
-    while (i < length && WHITESPACE.has(source[i])) i += 1;
+    while (i < length && isWhitespace(source[i])) i += 1;
 
     let value = '';
     let valueStart = i;
     if (source[i] === '=') {
       i += 1;
-      while (i < length && WHITESPACE.has(source[i])) i += 1;
+      while (i < length && isWhitespace(source[i])) i += 1;
       const quote = source[i];
       if (quote === '"' || quote === "'") {
         valueStart = i + 1;
@@ -284,7 +284,7 @@ function readAttributes(source, from) {
         i = close === -1 ? length : close + 1;
       } else {
         valueStart = i;
-        while (i < length && !WHITESPACE.has(source[i]) && source[i] !== '>') i += 1;
+        while (i < length && !isWhitespace(source[i]) && source[i] !== '>') i += 1;
         value = source.slice(valueStart, i);
       }
     }

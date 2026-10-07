@@ -389,18 +389,25 @@ function skipTerminators(source, from, limit) {
 }
 
 /**
+ * Shared with `selector-shapes.mjs`, which reads selectors this scanner handed
+ * over and has to agree with it about where whitespace and strings end.
+ *
  * @param {string} source
  * @param {number} from
- * @param {number} limit
+ * @param {number} [limit]
  */
-function skipWhitespace(source, from, limit) {
+export function skipWhitespace(source, from, limit = source.length) {
   let i = from;
   while (i < limit && isWhitespace(source[i])) i += 1;
   return i;
 }
 
-/** @param {string|undefined} char */
-function isWhitespace(char) {
+/**
+ * The five whitespace characters CSS and HTML both define.
+ *
+ * @param {string|undefined} char
+ */
+export function isWhitespace(char) {
   return char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\f';
 }
 
@@ -454,11 +461,15 @@ function scanForward(source, from, limit, stopChars) {
  * it. CSS ends a string token at a newline for the same reason, so that a
  * missing quote costs one declaration rather than the rest of the stylesheet.
  *
+ * Selector analysis uses this too, so a quote the scanner did not treat as
+ * opening a string cannot hide a combinator from it. HTML attribute values
+ * follow different rules (no escapes, no newline termination) and must not.
+ *
  * @param {string} source
  * @param {number} from
- * @param {number} limit
+ * @param {number} [limit]
  */
-function skipString(source, from, limit) {
+export function skipString(source, from, limit = source.length) {
   const quote = source[from];
   let i = from + 1;
   while (i < limit) {

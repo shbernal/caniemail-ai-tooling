@@ -15,6 +15,8 @@
  * vendored copy, edit this file and run `make sync-core`.
  */
 
+import { isWhitespace, skipString, skipWhitespace } from './css-scan.mjs';
+
 export const ADJACENT_SIBLING = 'Adjacent sibling combinator';
 export const ATTRIBUTE = 'Attribute selector';
 export const CHAINING = 'Chaining selectors';
@@ -254,7 +256,7 @@ function skipParenthesised(text, from) {
       continue;
     }
     if (char === '"' || char === "'") {
-      i = skipQuoted(text, i);
+      i = skipString(text, i);
       continue;
     }
     if (char === '(') depth += 1;
@@ -280,44 +282,11 @@ function skipBracketed(text, from) {
       continue;
     }
     if (char === '"' || char === "'") {
-      i = skipQuoted(text, i);
+      i = skipString(text, i);
       continue;
     }
     if (char === ']') return i + 1;
     i += 1;
   }
   return text.length;
-}
-
-/**
- * @param {string} text
- * @param {number} from
- */
-function skipQuoted(text, from) {
-  const quote = text[from];
-  let i = from + 1;
-  while (i < text.length) {
-    if (text[i] === '\\') {
-      i += 2;
-      continue;
-    }
-    if (text[i] === quote) return i + 1;
-    i += 1;
-  }
-  return text.length;
-}
-
-/**
- * @param {string} text
- * @param {number} from
- */
-function skipWhitespace(text, from) {
-  let i = from;
-  while (i < text.length && isWhitespace(text[i])) i += 1;
-  return i;
-}
-
-/** @param {string|undefined} char */
-function isWhitespace(char) {
-  return char === ' ' || char === '\t' || char === '\n' || char === '\r' || char === '\f';
 }

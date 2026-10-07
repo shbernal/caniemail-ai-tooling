@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- An unclosed quote inside an attribute selector no longer hides the rest of
+  the selector from `lint_email`: `a[title="x] > b` now reports the child
+  combinator. The stylesheet scanner already read that quote as an ordinary
+  character, and selector analysis now agrees with it. Both surfaces.
+
 - The skill CLI rejects an option it does not know, naming it. A typo such as
   `--limt 3` used to be accepted as an unknown flag with `3` as its value, and
   the command ran with the default limit. `--name=value` is accepted as well as

@@ -75,6 +75,15 @@ test('a combinator inside a quoted attribute value is not a combinator', () => {
   assert.ok(!shapesOf('[data-x="a b"]').includes(DESCENDANT));
 });
 
+test('an unclosed quote does not hide what follows it', () => {
+  // The CSS scanner does not treat a quote with no closing partner as opening
+  // a string, so it hands over this selector with the `>` in plain sight.
+  // Selector analysis has to read it the same way.
+  const shapes = shapesOf('a[title="x] > b');
+  assert.ok(shapes.includes(ATTRIBUTE));
+  assert.ok(shapes.includes(CHILD));
+});
+
 test('a combinator inside a pseudo-class argument is not this selector’s shape', () => {
   // `:not(a > b)` is one simple selector. Its argument is a selector in its own
   // right and its shapes belong to that one, which is how css-what modelled it.
