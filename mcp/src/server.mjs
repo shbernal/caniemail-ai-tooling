@@ -86,7 +86,10 @@ const CLIENT_ARG = z
 // Compact, not indented. Nothing human ever reads this — it goes into an
 // agent's context — and on a lint of a realistic newsletter against all 48
 // clients the indentation alone was 16KB, roughly 4k tokens of whitespace.
-const json = (value) => ({ content: [{ type: 'text', text: JSON.stringify(value) }] });
+/** @param {unknown} value */
+const json = (value) => ({
+  content: [{ type: /** @type {const} */ ('text'), text: JSON.stringify(value) }],
+});
 
 // Handlers throw rather than build an error result. The SDK catches anything a
 // tool handler throws and returns its message as an `isError` result, which is
@@ -104,8 +107,8 @@ const annotations = { readOnlyHint: true, openWorldHint: false };
 // on who asked. A 2025-era client never sees these fields.
 const DAY_MS = 24 * 60 * 60 * 1000;
 const cacheHints = {
-  'tools/list': { ttlMs: DAY_MS, cacheScope: 'public' },
-  'server/discover': { ttlMs: DAY_MS, cacheScope: 'public' },
+  'tools/list': { ttlMs: DAY_MS, cacheScope: /** @type {const} */ ('public') },
+  'server/discover': { ttlMs: DAY_MS, cacheScope: /** @type {const} */ ('public') },
 };
 
 /* -------------------------------------------------------------------------- */
