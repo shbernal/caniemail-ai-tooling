@@ -465,10 +465,19 @@ function escapeRegExp(value) {
 export function listClients(dataset) {
   const family = dataset.nicenames?.family ?? {};
   const platform = dataset.nicenames?.platform ?? {};
-  return dataset.clients.map((client) => {
+  const clients = dataset.clients.map((client) => {
     const [fam, plat] = client.split('.');
     return { client, family: family[fam] ?? fam, platform: platform[plat] ?? plat };
   });
+  return { clients, count: clients.length, data_source: dataset.meta };
+}
+
+/**
+ * Every feature category in the dataset, sorted.
+ * @param {Dataset} dataset
+ */
+export function categoriesOf(dataset) {
+  return [...new Set(dataset.features.map((feature) => feature.category))].sort();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -730,7 +739,7 @@ export function searchFeatures(dataset, query, options = {}) {
   // And again for a category: an unknown one filters out every feature. The
   // valid set is read from the data, as the client roster is, not frozen here.
   if (category !== undefined) {
-    const categories = [...new Set(dataset.features.map((feature) => feature.category))].sort();
+    const categories = categoriesOf(dataset);
     if (!categories.includes(category)) {
       throw new Error(
         `Unknown category ${JSON.stringify(category)}. Use one of: ${categories.join(', ')}.`,

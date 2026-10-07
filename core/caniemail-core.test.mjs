@@ -52,7 +52,9 @@ test('client roster is derived from the data', () => {
 });
 
 test('listClients resolves human-readable names', () => {
-  const clients = listClients(dataset);
+  const { clients, count, data_source } = listClients(dataset);
+  assert.equal(count, dataset.clients.length);
+  assert.equal(data_source, dataset.meta);
   const outlook = clients.find((c) => c.client === 'outlook.windows');
   assert.ok(outlook);
   assert.equal(outlook.family, 'Outlook');

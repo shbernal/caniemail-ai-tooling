@@ -17,6 +17,7 @@ import { serveStdio } from '@modelcontextprotocol/server/stdio';
 import { z } from 'zod';
 
 import {
+  categoriesOf,
   checkFeatureSupport,
   lintEmail,
   listClients,
@@ -72,7 +73,7 @@ const CLIENT_ROSTER = SNAPSHOT.clients.join(', ');
 // Listed for the same reason and from the same place, but described rather than
 // enforced: a `z.enum` would reject a category added upstream before the core,
 // which validates against the live data, ever saw it.
-const CATEGORIES = [...new Set(SNAPSHOT.features.map((feature) => feature.category))].sort();
+const CATEGORIES = categoriesOf(SNAPSHOT);
 
 const CLIENT_ARG = z
   .array(z.string())
@@ -231,14 +232,7 @@ function createServer() {
       annotations,
       inputSchema: z.object({}),
     },
-    async () => {
-      const dataset = await getDataset();
-      return json({
-        clients: listClients(dataset),
-        count: dataset.clients.length,
-        data_source: dataset.meta,
-      });
-    },
+    async () => json(listClients(await getDataset())),
   );
 
   return server;

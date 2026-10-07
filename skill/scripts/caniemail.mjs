@@ -192,11 +192,7 @@ async function main() {
     }
 
     case 'clients': {
-      print({
-        clients: listClients(dataset),
-        count: dataset.clients.length,
-        data_source: dataset.meta,
-      });
+      print(listClients(dataset));
       return;
     }
 
