@@ -354,14 +354,26 @@ function createTables(features) {
       return PROPERTY_NAME.test(trimmed) ? [{ title, names: [trimmed] }] : [];
     }),
 
-    // "px unit" -> "px".
+    // "px unit" -> "px", compiled here rather than per declaration. A unit
+    // only counts immediately after a digit, with nothing between: `margin: 0`
+    // is not the `in` unit, `1rem` is not `em`, and `content: "1 inch"` is not
+    // an `in` unit either. `initial` is a keyword rather than a suffix, so it
+    // matches on a word boundary instead.
     units: css
       .filter((t) => t.endsWith(' unit'))
-      .map((title) => ({ title, unit: title.replace(/ unit$/, '') })),
+      .map((title) => {
+        const unit = title.replace(/ unit$/, '');
+        const pattern = unit === 'initial' ? /\binitial\b/ : new RegExp(`\\d${escapeRegExp(unit)}`);
+        return { title, pattern };
+      }),
 
+    // Each title's names as one whole-word alternation, compiled once.
     values: Object.entries(VALUE_TITLE_EXCEPTIONS)
       .filter(([title]) => known.has(title))
-      .map(([title, names]) => ({ title, names })),
+      .map(([title, names]) => ({
+        title,
+        pattern: new RegExp(`(^|[\\s,])(?:${names.map(escapeRegExp).join('|')})([\\s,]|$)`),
+      })),
 
     // "::after" / ":nth-child" / ":has()" -> the pseudo's bare name.
     pseudos: css
@@ -494,38 +506,18 @@ export function matchKeywords(tables, propertyValue) {
  * @param {string} propertyValue
  */
 export function matchValues(tables, propertyValue) {
-  const titles = [];
-  for (const { title, names } of tables.values) {
-    if (
-      names.some((name) =>
-        new RegExp(`(^|[\\s,])${escapeRegExp(name)}([\\s,]|$)`).test(propertyValue),
-      )
-    ) {
-      titles.push(title);
-    }
-  }
-  return titles;
+  return tables.values.filter((v) => v.pattern.test(propertyValue)).map((v) => v.title);
 }
 
 /**
- * Titles matched by a unit appearing in a declaration value.
- *
- * A unit only counts immediately after a digit, so `margin: 0` does not report
- * the `in` unit and `1rem` does not report `em`. `initial` is a keyword rather
- * than a suffix, so it matches on a word boundary instead.
+ * Titles matched by a unit appearing in a declaration value, immediately after
+ * a digit. The patterns are built with the tables; see `units` there.
  *
  * @param {TitleTables} tables
  * @param {string} propertyValue
  */
 export function matchUnits(tables, propertyValue) {
-  const titles = [];
-  for (const { title, unit } of tables.units) {
-    // Immediately after the digit, with nothing between: `content: "1 inch"`
-    // is not an `in` unit.
-    const pattern = unit === 'initial' ? /\binitial\b/ : new RegExp(`\\d${escapeRegExp(unit)}`);
-    if (pattern.test(propertyValue)) titles.push(title);
-  }
-  return titles;
+  return tables.units.filter((u) => u.pattern.test(propertyValue)).map((u) => u.title);
 }
 
 /**
@@ -681,10 +673,10 @@ function stripImportant(value) {
 }
 
 /**
- * Deliberately duplicated in `caniemail-core.mjs`; see the note there.
+ * Escape a string for use as a literal inside a `RegExp`.
  *
  * @param {string} value
  */
-function escapeRegExp(value) {
+export function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

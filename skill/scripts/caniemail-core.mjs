@@ -22,6 +22,7 @@ import { join } from 'node:path';
 import { homedir, tmpdir } from 'node:os';
 
 import { detectFeatures } from './detect.mjs';
+import { escapeRegExp } from './feature-titles.mjs';
 import bundledData from './data/caniemail.json' with { type: 'json' };
 
 const DATA_URL = 'https://www.caniemail.com/api/data.json';
@@ -456,19 +457,6 @@ export function expandClients(dataset, globs) {
     );
   }
   return [...matched].sort();
-}
-
-/**
- * Deliberately duplicated in `feature-titles.mjs` rather than shared.
- *
- * Every core module is vendored into both surfaces by file copy, so a module
- * that imports a helper drags another file into `CORE_FILES` to save four
- * lines. Keeping them self-contained is worth more than the deduplication.
- *
- * @param {string} value
- */
-function escapeRegExp(value) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
