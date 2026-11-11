@@ -124,16 +124,18 @@ make smoke          # drive the MCP server over real stdio JSON-RPC
 
 Run `make sync-core test check-vendor` before committing any core change.
 
-`make test`, `make check-vendor`, `make lint`, `make typecheck` and `make
-check-format` also run as a lefthook `pre-commit` hook, so a forgotten `make
-sync-core` fails the commit rather than reaching a surface. Install the hooks
-once per clone with `pnpm install && pnpm exec lefthook install`; the same five
-gates run again in CI.
-The hook checks formatting and never rewrites the tree: like `make sync-core`,
-which is deliberately *not* automated, a change to what is committed is a
-decision to record in the commit, not a side effect of it. `make format` is the
-one target that does both, because a formatted core with stale copies would
-fail `check-vendor` straight away.
+There are no git hooks. `make test`, `make check-vendor`, `make lint`, `make
+typecheck` and `make check-format` run in CI on every push and pull request, so
+a forgotten `make sync-core` fails the PR rather than reaching a surface.
+`make sync-core` is deliberately *not* automated: a change to what is committed
+is a decision to record in the commit, not a side effect of it. `make format` is
+the one target that formats and syncs together, because a formatted core with
+stale copies would fail `check-vendor` straight away.
+
+Commit messages carry no AI attribution (no `Co-authored-by:` trailer for a
+tool, no "Generated with" line). CI's `commit-check` job enforces it with the
+rules in `.github/cchk.toml`. The AI disclosure goes in the pull request
+description instead, as the template asks.
 
 `make smoke` needs `mcp/node_modules`, which the root `pnpm install` provides.
 It tests the transport and tool registrations, which the core suite does not
@@ -160,9 +162,8 @@ matter here and both are load-bearing:
 
 pnpm blocks dependency lifecycle scripts by default and **fails the install
 until every one is answered** in `pnpm-workspace.yaml` under `allowBuilds`.
-Only `lefthook` is allowed one, for the postinstall that links its platform
-binary. If a new dependency demands a build script, decide deliberately rather
-than by reflex.
+No dependency here needs one today. If a new dependency demands a build script,
+decide deliberately rather than by reflex.
 
 Publishing stays on npm (`npm publish` from `mcp/`); see `docs/releasing.md`.
 
