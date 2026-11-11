@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1 - 2026-11-11
+
+- The MCP server requires `@modelcontextprotocol/server` ^2.4.0 and `zod`
+  ^4.6.7. No change to the tools or their output. The skill is not affected
+  and is not republished.
+
 ## 0.4.0 - 2026-10-08
 
 - An unclosed quote inside an attribute selector no longer hides the rest of

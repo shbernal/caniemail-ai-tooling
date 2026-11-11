@@ -10,8 +10,7 @@ from the other:
 
 Both carry their own vendored copy of the core, so **a release is only correct
 if `make check-vendor` passed on the exact commit being released.** That is the
-whole reason the pre-commit hook, CI, and `publish.yml`'s `verify` job all run
-it.
+whole reason CI and `publish.yml`'s `verify` job both run it.
 
 `.github/workflows/publish.yml` does the uploading. Two triggers, one per
 channel:
@@ -51,12 +50,15 @@ commit. The version the MCP server reports over the wire is read from
 `mcp/package.json`, so there is no third place to remember. The workflow refuses
 to publish a tag that disagrees with either manifest.
 
+`main` is protected, so the release commit lands through a pull request like any
+other change. Tag the squash-merged commit on `main`, not the PR branch.
+
 ## Cutting it
 
 ```bash
 VERSION=$(node -p "require('./mcp/package.json').version")
 
-git push origin main
+git switch main && git pull --ff-only   # after the release PR is merged
 git tag -a "v$VERSION" -m "v$VERSION" && git push origin "v$VERSION"   # -> npm
 gh release create "v$VERSION" --notes-from-tag                         # -> ClawHub
 ```
