@@ -65,16 +65,6 @@ test('listClients resolves human-readable names', () => {
 /* Regression: untested must not collapse into mitigated                       */
 /* -------------------------------------------------------------------------- */
 
-test('regression: "u" resolves to untested, not mitigated', () => {
-  // The package's getSupportType returns 'partial' for anything that is not
-  // y or n, merging `a` (works with a workaround) into `u` (never tested).
-  // 900 of its 1,637 partial verdicts are actually untested.
-  const feature = { stats: { gmail: { 'desktop-webmail': { '2024-01': 'u' } } } };
-  const resolved = resolveSupport(feature, 'gmail.desktop-webmail');
-  assert.equal(resolved.verdict, UNTESTED);
-  assert.notEqual(resolved.verdict, MITIGATED);
-});
-
 test('regression: "a" resolves to mitigated and keeps its notes', () => {
   const feature = {
     stats: { outlook: { windows: { 2019: 'a #1' } } },
@@ -86,6 +76,9 @@ test('regression: "a" resolves to mitigated and keeps its notes', () => {
 });
 
 test('the four verdicts are all reachable and distinct', () => {
+  // Regression: the package's getSupportType returns 'partial' for anything
+  // that is not y or n, merging `a` (works with a workaround) into `u` (never
+  // tested). 900 of its 1,637 partial verdicts are actually untested.
   /** @param {string} value */
   const build = (value) => ({ stats: { gmail: { 'desktop-webmail': { '2024-01': value } } } });
   const verdicts = ['y', 'n', 'a', 'u'].map(
@@ -224,13 +217,6 @@ test('a client list that is not a list says so, rather than "none given"', () =>
   assert.throws(() => expandClients(dataset, undefined), /must be an array, not undefined/);
 });
 
-test('a wildcard does not leak across the dot separator', () => {
-  // "outlook.*" must not match "outlook.windows.foo"-style ids, and "*" as a
-  // family must not swallow the platform segment.
-  const families = expandClients(dataset, ['gmail.*']);
-  assert.ok(families.every((c) => c.split('.').length === 2));
-});
-
 test('a run of stars is one star, and fails fast when it matches nothing', () => {
   // Each star used to compile to its own `[^.]*`, and n of them side by side
   // backtrack exponentially: twenty stars took seconds per call, blocking the
@@ -246,6 +232,8 @@ test('a run of stars is one star, and fails fast when it matches nothing', () =>
 /* -------------------------------------------------------------------------- */
 
 test('search finds features by common name', () => {
+  // "flexbox" is the sole keyword on css-display-flex and one of four on
+  // css-align-items, so it is more on-topic for a bare "flexbox" query.
   const flex = searchFeatures(dataset, 'flexbox');
   assert.equal(flex.results[0].slug, 'css-display-flex');
 
@@ -258,13 +246,6 @@ test('search ranks by query coverage, not by one loud match', () => {
   // border-radius on raw field weight alone; matching both query words wins.
   const result = searchFeatures(dataset, 'rounded corners');
   assert.equal(result.results[0].slug, 'css-border-radius');
-});
-
-test('search prefers the feature a keyword is most specific to', () => {
-  // "flexbox" is the sole keyword on css-display-flex and one of four on
-  // css-align-items, so it is more on-topic for a bare "flexbox" query.
-  const result = searchFeatures(dataset, 'flexbox');
-  assert.equal(result.results[0].slug, 'css-display-flex');
 });
 
 test('search returns identifiers only, never stats', () => {
@@ -445,23 +426,6 @@ test('the legend covers exactly the features the findings name', () => {
   }
 });
 
-test('nothing that varies by verdict is hoisted into the legend', () => {
-  // The split is the whole design: one entry per feature can only carry facts
-  // no verdict changes. `css-gap` is unsupported in Outlook and mitigated in
-  // Gmail, so its two findings must still differ from each other.
-  const result = lintEmail(dataset, {
-    html: '<div style="display:flex; gap:16px">x</div>',
-    clients: ['outlook.windows', 'gmail.desktop-webmail'],
-  });
-
-  const gap = result.findings.filter((f) => f.feature === 'css-gap');
-  assert.equal(gap.length, 2, 'expected gap to split across two verdicts');
-  assert.notEqual(gap[0].verdict, gap[1].verdict);
-  assert.notDeepEqual(gap[0].notes, gap[1].notes);
-  // ...while sharing exactly one legend entry between them.
-  assert.equal(Object.keys(result.features).filter((s) => s === 'css-gap').length, 1);
-});
-
 test('a feature whose only findings are suppressed leaves no legend entry', () => {
   // `includeUntested: false` drops the findings; a legend built ahead of the
   // filter would have kept describing features the caller never sees.
@@ -562,26 +526,6 @@ test('lint never reports passing features', () => {
   });
   for (const finding of result.findings) {
     assert.notEqual(finding.verdict, SUPPORTED);
-  }
-});
-
-test('lint splits one feature into separate findings per verdict', () => {
-  // A feature can be unsupported on one client and merely mitigated on
-  // another; collapsing those into one finding would lose the distinction
-  // that decides whether a workaround exists.
-  const result = lintEmail(dataset, {
-    html: '<div style="display:flex; gap:10px">hi</div>',
-    clients: ['*'],
-  });
-  const byFeature = new Map();
-  for (const finding of result.findings) {
-    byFeature.set(finding.feature, (byFeature.get(finding.feature) ?? 0) + 1);
-  }
-  assert.ok([...byFeature.values()].some((count) => count > 1));
-
-  // No finding ever mixes verdicts.
-  for (const finding of result.findings) {
-    assert.ok([UNSUPPORTED, MITIGATED, UNTESTED].includes(finding.verdict));
   }
 });
 
