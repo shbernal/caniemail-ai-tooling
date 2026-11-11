@@ -29,10 +29,10 @@ that half-failed can simply be run again.
 ## Before the tag
 
 ```bash
-pnpm install && pnpm exec lefthook install   # once per clone
-make sync-core                               # if the core changed at all
-make test check-vendor smoke                 # one install already covered mcp/
-make test-network                            # confirms the live fetch still works
+pnpm install                   # once per clone
+make sync-core                 # if the core changed at all
+make test check-vendor smoke   # one install already covered mcp/
+make test-network              # confirms the live fetch still works
 ```
 
 Then decide whether the dataset snapshot should move. It is the offline

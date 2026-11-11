@@ -9,11 +9,15 @@ If a model helped write an issue or a pull request, say which harness and which
 model, for example "Claude Code, Opus 5" or "Codex CLI, GPT-5". This is not a
 disclaimer. It tells a reviewer what to check first.
 
+The disclosure goes in the pull request description, where the template asks
+for it, not in commit messages. Commits carry no AI attribution: no
+`Co-authored-by:` trailer for a tool, no "Generated with" line. CI checks this
+with the rules in `.github/cchk.toml`.
+
 ## Setup
 
 ```bash
-pnpm install                 # devDependencies and mcp/'s deps; the shipped core has none
-pnpm exec lefthook install   # once per clone, wires the pre-commit hook
+pnpm install   # devDependencies and mcp/'s deps; the shipped core has none
 ```
 
 `mcp/` is a workspace member, so one install covers both package trees. pnpm is
@@ -45,9 +49,9 @@ GitHub skips it in blame by itself; run `git config blame.ignoreRevsFile
 CI runs the first three on Node 24 and on the current release, on every push and
 pull request.
 `test-network` runs nightly instead, on its own job, so an outage at
-caniemail.com cannot fail your patch. The pre-commit hook runs `make test`,
-`make check-vendor`, `make lint`, `make typecheck` and `make check-format`, so a stale vendored copy cannot be
-committed.
+caniemail.com cannot fail your patch. CI also runs `make check-vendor`, `make
+lint`, `make typecheck` and `make check-format`, so a stale vendored copy cannot
+be merged. There are no git hooks.
 
 ## Edit the core, never a copy
 
