@@ -32,12 +32,14 @@ import {
 const dataset = await loadDataset({ offline: true });
 
 /**
- * Milliseconds for the fastest of three calls: the run that load disturbed least.
+ * Milliseconds for the fastest of seven calls, after one warm-up call: the run
+ * that load, JIT and GC disturbed least.
  * @param {() => unknown} fn
  */
 const fastestOf = (fn) => {
+  fn();
   let best = Infinity;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 7; i++) {
     const started = performance.now();
     fn();
     best = Math.min(best, performance.now() - started);
