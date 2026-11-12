@@ -16,6 +16,20 @@ import assert from 'node:assert/strict';
 
 import { scanCss, scanStyleAttribute, splitTopLevel } from './css-scan.mjs';
 
+/**
+ * Milliseconds for the fastest of three calls: the run that load disturbed least.
+ * @param {() => unknown} fn
+ */
+const fastestOf = (fn) => {
+  let best = Infinity;
+  for (let i = 0; i < 3; i++) {
+    const started = performance.now();
+    fn();
+    best = Math.min(best, performance.now() - started);
+  }
+  return best;
+};
+
 /** @param {string} css */
 const declarationsIn = (css) =>
   scanCss(css).rules.flatMap((rule) =>
@@ -317,7 +331,9 @@ test('splitTopLevel respects strings, groups and brackets', () => {
 test('a long run of statements with no `{` after it scans in linear time', () => {
   // Each statement used to search to the end of the document for a `{`, so
   // 25 KB of `;` took six seconds. A truncated stylesheet is the ordinary case.
-  const started = performance.now();
-  scanCss(';'.repeat(50000));
-  assert.ok(performance.now() - started < 100);
+  // Eight times the input costs about eight times as long; the quadratic scan
+  // cost sixty-four. A ratio, not a bound in ms, so a loaded machine passes.
+  const base = fastestOf(() => scanCss(';'.repeat(5000)));
+  const scaled = fastestOf(() => scanCss(';'.repeat(40000)));
+  assert.ok(scaled < base * 24, `8x the input took ${(scaled / base).toFixed(1)}x as long`);
 });

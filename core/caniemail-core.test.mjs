@@ -31,6 +31,20 @@ import {
 
 const dataset = await loadDataset({ offline: true });
 
+/**
+ * Milliseconds for the fastest of three calls: the run that load disturbed least.
+ * @param {() => unknown} fn
+ */
+const fastestOf = (fn) => {
+  let best = Infinity;
+  for (let i = 0; i < 3; i++) {
+    const started = performance.now();
+    fn();
+    best = Math.min(best, performance.now() - started);
+  }
+  return best;
+};
+
 /* -------------------------------------------------------------------------- */
 /* Dataset loading                                                             */
 /* -------------------------------------------------------------------------- */
@@ -222,9 +236,18 @@ test('a run of stars is one star, and fails fast when it matches nothing', () =>
   // backtrack exponentially: twenty stars took seconds per call, blocking the
   // single-threaded server for every session on it.
   assert.deepEqual(expandClients(dataset, ['gmail.**']), expandClients(dataset, ['gmail.*']));
-  const started = performance.now();
-  assert.throws(() => expandClients(dataset, ['*'.repeat(40) + 'x']), /No client matches/);
-  assert.ok(performance.now() - started < 100);
+  // Twelve stars cost about what four do; the backtracking grew exponentially
+  // with them. A ratio, not a bound in ms, so a loaded machine passes.
+  // Fifty calls per sample, because one call is too short to time.
+  /** @param {number} stars */
+  const fiftyCalls = (stars) => () => {
+    for (let i = 0; i < 50; i++) {
+      assert.throws(() => expandClients(dataset, ['*'.repeat(stars) + 'x']), /No client matches/);
+    }
+  };
+  const base = fastestOf(fiftyCalls(4));
+  const scaled = fastestOf(fiftyCalls(12));
+  assert.ok(scaled < base * 10, `12 stars took ${(scaled / base).toFixed(1)}x as long as 4`);
 });
 
 /* -------------------------------------------------------------------------- */
