@@ -185,11 +185,15 @@ test('elements the title does not spell out are still mapped', () => {
 });
 
 test('attributes match by name', () => {
-  assert.deepEqual(matchAttributes(tables, ['role']), ['role attribute']);
-  assert.deepEqual(matchAttributes(tables, ['valign']), ['valign attribute']);
-  assert.deepEqual(matchAttributes(tables, ['srcset']), ['srcset and sizes attributes']);
-  assert.deepEqual(matchAttributes(tables, ['sizes']), ['srcset and sizes attributes']);
-  assert.deepEqual(matchAttributes(tables, ['nonsense']), []);
+  assert.deepEqual(matchAttributes(tables, new Map([['role', '']])), ['role attribute']);
+  assert.deepEqual(matchAttributes(tables, new Map([['valign', '']])), ['valign attribute']);
+  assert.deepEqual(matchAttributes(tables, new Map([['srcset', '']])), [
+    'srcset and sizes attributes',
+  ]);
+  assert.deepEqual(matchAttributes(tables, new Map([['sizes', '']])), [
+    'srcset and sizes attributes',
+  ]);
+  assert.deepEqual(matchAttributes(tables, new Map([['nonsense', '']])), []);
 });
 
 test('a title naming several attributes yields each of them', () => {

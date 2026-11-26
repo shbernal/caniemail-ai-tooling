@@ -586,11 +586,11 @@ export function matchElement(tables, tagName) {
  * Titles matched by the attribute names present on an element.
  *
  * @param {TitleTables} tables
- * @param {string[]} attributeNames
+ * @param {Map<string, string>} attributes
  */
-export function matchAttributes(tables, attributeNames) {
+export function matchAttributes(tables, attributes) {
   return tables.attributes
-    .filter((a) => a.names.some((name) => attributeNames.includes(name)))
+    .filter((a) => a.names.some((name) => attributes.has(name)))
     .map((a) => a.title);
 }
 
