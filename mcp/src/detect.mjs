@@ -257,13 +257,12 @@ function detectHtml(source, sightings) {
 
   for (const element of scan.elements) {
     const { start, end } = element;
-    const names = element.attributes.map((attribute) => attribute.name);
     const values = new Map(
       element.attributes.map((attribute) => [attribute.name, attribute.value]),
     );
 
     for (const title of matchElement(tables, element.tagName)) sightings.record(title, start, end);
-    for (const title of matchAttributes(tables, names)) sightings.record(title, start, end);
+    for (const title of matchAttributes(tables, values)) sightings.record(title, start, end);
     for (const title of matchElementAttributes(tables, element.tagName, values)) {
       sightings.record(title, start, end);
     }
